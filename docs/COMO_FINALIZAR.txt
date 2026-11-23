@@ -3,8 +3,8 @@ COMO FINALIZAR A ENTREGA
 1. Leia o README e os dois relatórios. O nome, RA, instituição e curso estão no início dos PDFs, sem capa separada. Não há regra explícita no enunciado dizendo que a capa seria excluída da contagem.
 2. O Docker Desktop, o build, o smoke e a coleta de métricas/traces foram verificados em 23/11/2026. Para reproduzir, execute docker compose up -d --build --wait --wait-timeout 300. Não é preciso contratar nuvem para a demonstração local. Não considere execução comprovada somente porque há arquivos de configuração.
 3. Rode o smoke indicado no README. Salve evidências reais, como saída do teste, docker compose ps, um trace no Jaeger e métricas no Prometheus. Não registre senhas nem dados pessoais em capturas.
-4. Crie um repositório no GitHub, com o conteúdo da pasta pedidos-veloz na raiz. Rode o workflow. Se não executar, mantenha explicitamente essa limitação no relatório. O arquivo docs/VALIDACAO.txt descreve a verificação feita na preparação, não uma execução no GitHub.
-5. Kubernetes local foi verificado com kind: Deployments, PVC, smoke, HPA, Pod Security Admission e dois caminhos de NetworkPolicy. Terraform validou e criou o namespace. O pipeline remoto continua pendente; consulte evidencias/ e docs/VALIDACAO.txt.
+4. O repositório público é https://github.com/Seteshy/pedidos-veloz. O workflow remoto concluiu com sucesso: https://github.com/Seteshy/pedidos-veloz/actions/runs/45253072887. Consulte docs/VALIDACAO.txt e evidencias/github-ci.json.
+5. Kubernetes local foi verificado com kind: Deployments, PVC, smoke, HPA, Pod Security Admission e dois caminhos de NetworkPolicy. Terraform validou e criou o namespace. O pipeline remoto também foi aprovado; consulte evidencias/ e docs/VALIDACAO.txt.
 6. Grave o pitch seguindo docs/ROTEIRO_VIDEO.txt. Se o ambiente ainda não estiver funcionando, o enunciado permite demonstração conceitual: apresente código e arquitetura e diga claramente que não está demonstrando uma execução real.
 7. Publique no YouTube como não listado. Use o link real:
 
@@ -20,4 +20,4 @@ COMO FINALIZAR A ENTREGA
 9. Confira novamente: teórico de 2 a 3 páginas; prático de 3 a 6 páginas; vídeo até 4 minutos; link acessível no README e PDF; repositório acessível ao avaliador. As referências já são incluídas dentro da contagem de páginas.
 10. Se obtiver resultados novos, atualize docs/relatorios.json e docs/VALIDACAO.txt com as evidências reais e gere novamente. O conjunto inicial não afirma implantação em nuvem, disponibilidade medida, execução do pipeline remoto nem autoscaling observado.
 
-O pacote atualizado ainda depende da execução do workflow remoto e da sua gravação/publicação. Compose, observabilidade local, Kubernetes, HPA, segurança nos caminhos testados e Terraform já foram verificados.
+O pacote atualizado depende agora da sua gravação/publicação do vídeo e da inclusão do link real nos relatórios e README. Compose, observabilidade local, Kubernetes, HPA, segurança nos caminhos testados e Terraform já foram verificados.

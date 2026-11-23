@@ -30,9 +30,9 @@ Fala: “Para Kubernetes, defini Deployments, Services, ConfigMap e Secret. Read
 Não afirme que o HPA escalou se isso não foi observado.
 
 2:50 A 3:25 — PIPELINE E IAC
-Tela: workflow, depois infra/main.tf.
+Tela: abra https://github.com/Seteshy/pedidos-veloz/actions/runs/45253072887, mostre os jobs aprovados e depois infra/main.tf.
 Fala: “O pipeline prevê lint, testes, build, smoke no Compose e teste de implantação em kind. Depois publica a imagem no GHCR com o identificador do commit. O deploy persistente é opcional e usa credencial em Secret do GitHub. O esqueleto Terraform cria o namespace em um cluster existente, sem contratar nuvem.”
-Se o workflow não tiver rodado: “A configuração está preparada; ainda não tenho uma execução remota para apresentar.”
+Execução comprovada: mostre validar, kubernetes-laboratorio e publicar aprovados. Explique que deploy persistente está desabilitado e por isso foi ignorado.
 
 3:25 A 3:45 — REFERÊNCIA E LIMITES
 Tela: referências do README.

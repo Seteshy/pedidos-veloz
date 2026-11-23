@@ -37,3 +37,6 @@ https://kind.sigs.k8s.io/docs/user/quick-start/
 [13] KUBERNETES SIGS. Metrics Server versão 0.8.0. Consulta em 23 nov. 2026.
 https://github.com/kubernetes-sigs/metrics-server/tree/v0.8.0
 
+[14] SETESHY. Pedidos Veloz execução do pipeline. 23 nov. 2026.
+https://github.com/Seteshy/pedidos-veloz/actions/runs/45253072887
+

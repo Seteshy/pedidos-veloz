@@ -1,5 +1,9 @@
 # Pedidos Veloz
 
+**Repositório público:** https://github.com/Seteshy/pedidos-veloz
+
+[![CI/CD](https://github.com/Seteshy/pedidos-veloz/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/Seteshy/pedidos-veloz/actions/runs/45253072887)
+
 Projeto acadêmico de Cloud DevOps, por **Arthur Lima Pereira**, RA **133275**, Análise e Desenvolvimento de Sistemas, **UNIFECAF**.
 
 MVP de pedidos com quatro microsserviços Python/FastAPI e PostgreSQL. A Loja Veloz é o cenário do enunciado; estoque inicial e pagamentos são exclusivamente didáticos. O pagamento **não integra um provedor financeiro real**.
@@ -161,9 +165,9 @@ Fontes do laboratório: [kind](https://kind.sigs.k8s.io/docs/user/quick-start/),
 
 ## CI/CD e registry
 
-Crie um repositório GitHub, envie **o conteúdo desta pasta** à raiz e use a branch `main`. O workflow faz lint, testes unitários, build, smoke no Compose, validação Terraform e implantação em um cluster kind efêmero. Só depois publica no GHCR com `GITHUB_TOKEN` e tag `sha-COMMIT`. Essa tag permite rastrear o código; não use `latest` como referência de release. O pacote deve estar público para o cluster baixar sem login, ou será necessário configurar `imagePullSecrets` para um pacote privado.
+O projeto está publicado em https://github.com/Seteshy/pedidos-veloz, na branch `main`, com o conteúdo desta pasta na raiz. O workflow faz lint, testes unitários, build, smoke no Compose, validação Terraform e implantação em um cluster kind efêmero. Só depois publica no GHCR com `GITHUB_TOKEN` e tag `sha-COMMIT`. Essa tag permite rastrear o código; não use `latest` como referência de release. O pacote deve estar público para o cluster baixar sem login, ou será necessário configurar `imagePullSecrets` para um pacote privado.
 
-O teste kind exercita rollout e smoke; não instala Metrics Server, não demonstra autoscaling e o CNI padrão não comprova a aplicação de NetworkPolicy. Não há resultados remotos até executar esse workflow no GitHub.
+O teste kind exercita rollout e smoke; não instala Metrics Server, não demonstra autoscaling e o CNI padrão não comprova a aplicação de NetworkPolicy. A execução remota de 23/11/2026 concluiu os três jobs obrigatórios: https://github.com/Seteshy/pedidos-veloz/actions/runs/45253072887.
 
 O deploy em um cluster persistente é **opcional e desabilitado por padrão**. Para habilitar: criar o environment `laboratorio`, definir a variável de repositório `ENABLE_DEPLOY=true` e o secret de ambiente `KUBECONFIG_B64` com credencial de escopo mínimo. O cluster e namespace precisam existir, com o Secret `database` previamente criado e acesso às imagens. O runner hospedado do GitHub precisa alcançar o servidor Kubernetes: o cluster do seu computador normalmente não é acessível por ele. Para o trabalho, use o teste kind e o deploy local manual sem expor o cluster à internet.
 
@@ -192,4 +196,17 @@ Veja `docs/REFERENCIAS.txt`, `docs/ROTEIRO_VIDEO.txt`, `docs/COMO_FINALIZAR.txt`
 
 ## Validação local realizada
 
-Em 23/11/2026 foram concluídos o build, a subida dos oito contêineres e o smoke com PostgreSQL real. Prometheus confirmou quatro alvos ativos e Jaeger retornou um trace atravessando os quatro serviços. Veja `docs/VALIDACAO.txt` e `evidencias/`. Kubernetes e Terraform também foram verificados na etapa seguinte; permanece pendente a execução do workflow remoto.
+Em 23/11/2026 foram concluídos o build, a subida dos oito contêineres e o smoke com PostgreSQL real. Prometheus confirmou quatro alvos ativos e Jaeger retornou um trace atravessando os quatro serviços. Veja `docs/VALIDACAO.txt` e `evidencias/`. Kubernetes e Terraform também foram verificados na etapa seguinte; o workflow remoto também foi concluído com sucesso.
+
+## Validação remota no GitHub
+
+Execução aprovada: https://github.com/Seteshy/pedidos-veloz/actions/runs/45253072887. Commit de código verificado: `7e65a3b6644234a6dce9b579201c177dbeaa1e66`. `validar`, `kubernetes-laboratorio` e `publicar` concluíram com sucesso. `deploy` foi ignorado porque a implantação em cluster persistente está desabilitada; não há implantação comercial em nuvem.
+
+Imagem publicada pelo pipeline: `ghcr.io/seteshy/pedidos-veloz:sha-7e65a3b6644234a6dce9b579201c177dbeaa1e66`. O download anônimo do manifesto da imagem foi confirmado, e o digest coincide com o log de publicação. A imagem pública também foi aplicada no Kubernetes local e passou no smoke. Os logs e a evidência do Compose podem ser consultados na execução do Actions. O vídeo ainda precisa ser gravado e publicado.
+Pelo overlay `k8s/overlays/registry`, a imagem fica fixada por digest. Após configurar namespace e Secret, use:
+
+```powershell
+kubectl apply -k k8s/overlays/registry
+```
+
+A base continua usando a imagem local para desenvolvimento. O deploy automático do workflow em cluster persistente continua desabilitado; a aplicação da imagem do registry foi uma verificação no cluster kind local.

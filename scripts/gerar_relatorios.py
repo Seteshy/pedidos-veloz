@@ -36,6 +36,9 @@ def generate(content, key, target):
              Paragraph("UNIFECAF | Análise e Desenvolvimento de Sistemas", STYLES["meta"]),
              Paragraph("Cloud DevOps Orchestrating Containers and Micro Services", STYLES["meta"]),
              Spacer(1, 6)]
+    if key == "practice" and content.get("repository_url"):
+        url = content["repository_url"]
+        story.append(Paragraph(f'Repositório: <link href="{escape(url, quote=True)}">{escape(url)}</link>', STYLES["meta"]))
     for i, page in enumerate(report["pages"]):
         if i:
             story.append(PageBreak())

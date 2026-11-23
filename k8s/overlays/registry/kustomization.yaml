@@ -1,0 +1,9 @@
+# Imagem publicada pela execucao aprovada do GitHub Actions.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+images:
+  - name: pedidos-veloz/app
+    newName: ghcr.io/seteshy/pedidos-veloz
+    digest: sha256:743a37eea9ee676d12c06f3a0eafb83ab7003b9521655e631c5afef3e1dd7243

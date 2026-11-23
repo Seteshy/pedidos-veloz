@@ -40,8 +40,20 @@ EVIDÊNCIAS ADICIONAIS
 - evidencias/hpa-carga.json, hpa-eventos.txt e carga-http.json
 - evidencias/pod-security-admission.txt e networkpolicy-*.json
 
+VALIDAÇÃO REMOTA NO GITHUB EM 23/11/2026
+- Repositório público: https://github.com/Seteshy/pedidos-veloz
+- Execução: https://github.com/Seteshy/pedidos-veloz/actions/runs/45253072887
+- Commit verificado: 7e65a3b6644234a6dce9b579201c177dbeaa1e66
+- validar: success (lint, testes unitários, Compose e validação Terraform).
+- kubernetes-laboratorio: success (cluster kind temporário, rollout e smoke).
+- publicar: success (build e envio de imagem ao GHCR).
+- deploy: skipped; ambiente persistente não habilitado.
+- Manifesto GHCR acessível sem autenticação e digest conferido.
+- Imagem do registry aplicada por digest no kind local; rollout e smoke aprovados.
+- Imagem: ghcr.io/seteshy/pedidos-veloz:sha-7e65a3b6644234a6dce9b579201c177dbeaa1e66
+- Evidência: evidencias/github-ci.json.
+
 PENDENTE
-- Publicação do repositório e execução do GitHub Actions.
 - Gravação e publicação do pitch; inserir URL real e regenerar PDFs.
 
 Os resultados são de laboratório local. Não representam desempenho comercial ou implantação em nuvem.

@@ -63,6 +63,11 @@
       "text": "KUBERNETES SIGS. Metrics Server versão 0.8.0. Consulta em 23 nov. 2026.",
       "url": "https://github.com/kubernetes-sigs/metrics-server/tree/v0.8.0",
       "label": "Repositório oficial"
+    },
+    "14": {
+      "text": "SETESHY. Pedidos Veloz execução do pipeline. 23 nov. 2026.",
+      "url": "https://github.com/Seteshy/pedidos-veloz/actions/runs/45253072887",
+      "label": "Execução no GitHub Actions"
     }
   },
   "theory": {
@@ -329,7 +334,7 @@
         ],
         [
           "body",
-          "Com Metrics Server [13], a carga de 180 segundos fez 3.422 consultas HTTP bem-sucedidas, sem erros registrados pelo gerador. O Gateway e o Estoque aumentaram de duas para quatro réplicas; Pedidos e Pagamentos permaneceram em duas. Após a carga, Gateway e Estoque retornaram a duas réplicas. Isso demonstra reação do HPA no laboratório e não comprova capacidade comercial. O Pod Security Admission rejeitou um pod root em dry-run. A política de rede permitiu Pedidos acessar Pagamentos e bloqueou o acesso direto do Gateway. As evidências estão em evidencias. Continuam pendentes o workflow no GitHub e o vídeo."
+          "Com Metrics Server [13], a carga de 180 segundos fez 3.422 consultas HTTP bem-sucedidas, sem erros registrados pelo gerador. O Gateway e o Estoque aumentaram de duas para quatro réplicas; Pedidos e Pagamentos permaneceram em duas. Após a carga, Gateway e Estoque retornaram a duas réplicas. Isso demonstra reação do HPA no laboratório e não comprova capacidade comercial. O Pod Security Admission rejeitou um pod root em dry-run. A política de rede permitiu Pedidos acessar Pagamentos e bloqueou o acesso direto do Gateway. As evidências estão em evidencias. O pipeline no GitHub concluiu testes, implantação temporária e publicação no GHCR [14]. A imagem publicada também passou no smoke do cluster local, fixada por digest. O deploy automático externo está desabilitado. Falta publicar o vídeo."
         ],
         [
           "heading",
@@ -337,7 +342,7 @@
         ],
         [
           "body",
-          "Para o horizonte de quatro semanas proposto no cenário, o plano sugerido é: primeira semana para aplicação e Compose; segunda para testes e manifests; terceira para pipeline e telemetria; quarta para testes de carga, revisão de segurança e demonstração. Trata-se de planejamento proposto, não de cronograma executado. Para a entrega acadêmica, o README e o roteiro orientam uma demonstração local ou, se necessário, conceitual, deixando explícito o que foi realmente observado."
+          "Para as quatro semanas do cenário, proponho aplicação e Compose na primeira; testes e manifests na segunda; pipeline e telemetria na terceira; carga, segurança e demonstração na quarta. É um planejamento proposto, não a duração real deste trabalho."
         ],
         [
           "body",
@@ -357,7 +362,8 @@
             10,
             11,
             12,
-            13
+            13,
+            14
           ]
         ],
         [
@@ -366,5 +372,7 @@
         ]
       ]
     ]
-  }
+  },
+  "repository_url": "https://github.com/Seteshy/pedidos-veloz",
+  "ci_run_url": "https://github.com/Seteshy/pedidos-veloz/actions/runs/45253072887"
 }
