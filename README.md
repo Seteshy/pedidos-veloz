@@ -31,10 +31,12 @@ Uma imagem é reutilizada em quatro processos independentes, selecionados por `S
 Pré-requisitos: Docker Desktop com engine Linux em execução e Docker Compose v2. Não é necessário contratar nuvem. Execute os comandos **na pasta deste README**.
 
 1. Abra o Docker Desktop. `docker version` deve mostrar Client e Server.
-2. No PowerShell, copie a configuração e edite a senha local:
+2. Apenas na primeira configuração, crie o `.env` e escolha uma senha local. Se ele já existir e o ambiente estiver configurado, preserve o arquivo:
 
 ```powershell
-Copy-Item .env.example .env
+if (!(Test-Path -LiteralPath .env)) {
+    Copy-Item .env.example .env
+}
 notepad .env
 ```
 

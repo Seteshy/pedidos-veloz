@@ -1,42 +1,73 @@
-ROTEIRO DO PITCH
-Meta: aproximadamente 3 minutos e 40 segundos; limite da atividade: 4 minutos.
-Leia antes, ensaie com cronômetro e fale com suas palavras. Não diga que executou algo se estiver apenas mostrando a configuração.
+ROTEIRO DO PITCH — DEMONSTRAÇÃO DO PROJETO
+Meta: cerca de 3 minutos e 45 segundos. Limite: 4 minutos.
+Use as falas como apoio e explique com suas palavras. A apresentação percorre a arquitetura, um pedido real no ambiente de laboratório e as decisões técnicas.
 
-PREPARAÇÃO
-Abra o Docker Desktop, suba o Compose conforme o README e confira docker compose ps. Deixe abertos: README com arquitetura, http://localhost:8080/docs, http://localhost:9090, http://localhost:16686 e o workflow .github/workflows/ci-cd.yml. Aumente a fonte do terminal. Não mostre .env nem credenciais. Verifique se há estoque para a demonstração.
+O QUE DEIXAR PREPARADO
+- VS Code com a pasta pedidos-veloz aberta e a prévia do README na seção Arquitetura. O explorador mostra a organização em app, db, observability, k8s, infra e .github/workflows.
+- Navegador com três abas: http://localhost:8080/docs, http://localhost:9090 e http://localhost:16686.
+- Uma aba com a execução aprovada do GitHub Actions: https://github.com/Seteshy/pedidos-veloz/actions/runs/45254549698.
+- Docker Desktop em execução. Como o ambiente desta máquina já está configurado, não copie .env.example sobre o .env e não altere a senha durante a preparação.
+- Antes de gravar, ensaie a criação de um pedido e confira as métricas e o trace. Prepare um UUID novo para o pedido da gravação. O comando [guid]::NewGuid().ToString() no PowerShell gera esse ID.
+- Deixe fora da gravação o .env, .local, senhas, kubeconfig e configurações de autenticação.
 
-0:00 A 0:25 — APRESENTAÇÃO E PROBLEMA
-Tela: README, diagrama da arquitetura.
-Fala sugerida: “Olá, sou Arthur Lima Pereira, estudante de Análise e Desenvolvimento de Sistemas da UNIFECAF. Neste trabalho, desenvolvi o MVP Pedidos Veloz para o cenário da Loja Veloz. A proposta é padronizar o ambiente e mostrar como automatizar a entrega e acompanhar falhas entre serviços.”
+0:00 A 0:50 — ARQUITETURA E CONTAINERS
+Tela: README no VS Code, diagrama da arquitetura e organização das pastas. Use o README para explicar o fluxo, sem ler código linha por linha.
+Fala sugerida:
+“Sou Arthur Lima Pereira, estudante de Análise e Desenvolvimento de Sistemas da UNIFECAF. Este é o Pedidos Veloz, um MVP para o cenário da Loja Veloz. O cliente acessa o Gateway; Pedidos coordena a reserva no Estoque e o Pagamento simulado. Os dados ficam no PostgreSQL.
+Usei Docker Compose para iniciar os serviços de forma padronizada. As aplicações compartilham uma imagem Python, mas executam como quatro serviços separados. A imagem tem build em duas etapas e usuário sem privilégios. O volume preserva os dados do banco entre recriações dos contêineres.”
+Decisões cobertas: divisão dos serviços, ambiente reproduzível, imagem, usuário e persistência.
 
-0:25 A 0:55 — ARQUITETURA E CONTAINERS
-Tela: diagrama e docker compose ps.
-Fala: “O cliente acessa o gateway, que encaminha os pedidos. O serviço de pedidos chama estoque e pagamentos. O pagamento é simulado, sem transação financeira real. O PostgreSQL mantém os dados em um volume. Usei uma imagem Python em quatro serviços, com usuário sem privilégios e build em duas etapas. O Compose sobe o ambiente com um comando.”
-Se o ambiente não tiver sido executado, substitua a última frase por: “O arquivo Compose descreve a subida com um comando; estou apresentando a configuração de forma conceitual.”
+0:50 A 1:30 — AMBIENTE FUNCIONANDO
+Tela: http://localhost:8080/docs.
+Ação:
+1. Abra POST /orders e clique em Try it out.
+2. Preencha order_id com o UUID novo preparado, sku com CAMISETA, quantity com 1 e simulate_decline com false.
+3. Clique em Execute e mostre a resposta com status CONFIRMED.
+4. Se couber no tempo, mostre GET /orders/{order_id} com esse ID. Não é necessário demonstrar todos os casos de teste no pitch.
+Fala:
+“Aqui crio um pedido pela API. O serviço reserva o item, consulta o pagamento simulado e confirma o pedido. O ID também permite consultar o resultado e evita processar novamente a mesma solicitação. Se o pagamento for recusado, o fluxo implementado devolve a reserva ao estoque.”
+Não é necessário abrir um terminal ou editar código durante essa demonstração.
 
-0:55 A 1:35 — PEDIDO E TESTE
-Tela: PowerShell. Execute os comandos de criar e consultar pedido do README. Mostre o status retornado. Depois repita a criação com o mesmo corpo, explicando que a reserva não deve ser duplicada.
-Fala após execução confirmada: “Este pedido foi confirmado e pode ser consultado pelo ID. Repetir o mesmo pedido não repete o desconto de estoque. Também preparei tratamento para estoque insuficiente e devolução da reserva quando o pagamento simulado é recusado. Um timeout exige revisão, porque o serviço remoto pode ter concluído a operação.”
-Alternativa conceitual: mostre process_order e o teste de compensação. Diga: “Estes são os caminhos implementados e os testes unitários; esta tela não comprova integração com o banco.”
+1:30 A 2:15 — MÉTRICAS E TRACES
+Tela 1: http://localhost:9090.
+Ação: execute a consulta abaixo e mostre os contadores por serviço. Você pode deixá-la preenchida antes da gravação:
+sum by (service) (veloz_http_requests_total)
+Fala:
+“O Prometheus coleta as métricas de requisições e duração. Esta consulta mostra os contadores por serviço.”
+Tela 2: http://localhost:16686.
+Ação: selecione gateway em Service, clique em Find Traces e abra um trace de POST /orders que mostre os quatro serviços. Os traces levam alguns segundos para aparecer; confira isso no ensaio.
+Fala:
+“No Jaeger, o trace acompanha a mesma requisição pelo Gateway, Pedidos, Estoque e Pagamentos. O OpenTelemetry propaga esse contexto. Os logs JSON também incluem o identificador do trace para relacionar os eventos.”
+Decisões cobertas: métricas, logs e tracing distribuído. Não é necessário abrir arquivos de configuração dessas ferramentas.
 
-1:35 A 2:10 — OBSERVABILIDADE
-Tela: Jaeger. Selecione gateway, busque um trace recente e abra os spans. Em Prometheus, mostre sum by (service) (rate(veloz_http_requests_total[1m])). Aguarde uma ou duas coletas após os pedidos.
-Fala se houver dados: “O OpenTelemetry propaga o contexto entre os serviços e envia spans ao Collector e ao Jaeger. Isso permite acompanhar a mesma requisição. O Prometheus coleta métricas de requisições e duração. Os logs JSON também incluem o identificador do trace.”
-Sem dados: mostre telemetry.py e observability/. Diga “Esta é a instrumentação e a configuração de coleta; a visualização ainda precisa ser validada no ambiente.”
+2:15 A 2:55 — KUBERNETES, DEPLOY E ESCALABILIDADE
+Tela: volte ao README no VS Code, nas seções Kubernetes local, Manifests e segurança e HPA. Mostre brevemente a pasta k8s. Não precisa abrir e percorrer os YAMLs.
+Fala:
+“No Kubernetes, os Deployments mantêm as réplicas e os Services organizam o acesso entre elas. Usei ConfigMap e Secret para separar configuração e credenciais. As probes indicam se o processo está vivo e pronto para receber tráfego.
+Escolhi rolling update para substituir as réplicas gradualmente. O HPA usa CPU e varia de duas a quatro réplicas. No teste local, Gateway e Estoque aumentaram para quatro e depois voltaram a duas. Isso demonstra a escala automática no laboratório, sem comprovar capacidade de produção.”
+Não execute novamente a carga de três minutos durante o pitch. Se quiser mostrar a evidência, deixe evidencias/hpa-eventos.txt e hpa-retorno.json preparados antes da gravação.
 
-2:10 A 2:50 — KUBERNETES, DEPLOY E ESCALA
-Tela: k8s/base/pedidos.yaml e pedidos-hpa.yaml.
-Fala: “Para Kubernetes, defini Deployments, Services, ConfigMap e Secret. Readiness controla o recebimento de tráfego e liveness detecta falha do processo. O rolling update troca as réplicas gradualmente. O HPA foi configurado para duas a quatro réplicas, com alvo inicial de 70% de CPU, e depende do Metrics Server. Esse valor precisa ser calibrado com carga. O banco de uma réplica é uma simplificação do laboratório.”
-Não afirme que o HPA escalou se isso não foi observado.
+2:55 A 3:30 — PIPELINE CI/CD
+Tela: execução aprovada do GitHub Actions no navegador. Mostre validar, kubernetes-laboratorio e publicar com sucesso.
+Fala:
+“O pipeline faz lint, testes, build, teste completo com Compose e validação Terraform. Depois implanta e testa em um cluster Kubernetes temporário. Só após as verificações publica a imagem no GHCR, identificada pelo commit.
+A imagem publicada também foi testada no Kubernetes local. O deploy automático para um cluster externo permanece desabilitado. O Terraform criou o namespace do laboratório sem contratar nuvem.”
+O arquivo .github/workflows/ci-cd.yml pode ser mostrado brevemente no VS Code, mas isso é opcional. A tela de execução comprova o pipeline e evita gastar o pitch lendo YAML.
 
-2:50 A 3:25 — PIPELINE E IAC
-Tela: abra https://github.com/Seteshy/pedidos-veloz/actions/runs/45253072887, mostre os jobs aprovados e depois infra/main.tf.
-Fala: “O pipeline prevê lint, testes, build, smoke no Compose e teste de implantação em kind. Depois publica a imagem no GHCR com o identificador do commit. O deploy persistente é opcional e usa credencial em Secret do GitHub. O esqueleto Terraform cria o namespace em um cluster existente, sem contratar nuvem.”
-Execução comprovada: mostre validar, kubernetes-laboratorio e publicar aprovados. Explique que deploy persistente está desabilitado e por isso foi ignorado.
+3:30 A 3:45 — ENCERRAMENTO
+Tela: README ou visão geral do repositório.
+Fala:
+“Usei as unidades da disciplina e o Online Boutique como referências. O projeto integra ambiente local, entrega e observabilidade. Como limites do MVP, o pagamento é simulado e o banco tem uma réplica. Para produção, seriam necessários pagamento real, backup, autenticação e conciliação automática.”
 
-3:25 A 3:45 — REFERÊNCIA E LIMITES
-Tela: referências do README.
-Fala: “Usei como referência pública o Online Boutique, do Google Cloud, e as unidades da disciplina. Mantive o projeto menor para explicar cada etapa. Para produção, faltariam pagamento real, conciliação automática, banco com alta disponibilidade, backup e segurança mais completa. A principal contribuição do projeto é organizar desenvolvimento, entrega e observação em um fluxo reproduzível.”
+COMO CADA REQUISITO APARECE
+- Visão geral da arquitetura: diagrama e fluxo no README aberto no VS Code.
+- Ambiente funcionando: pedido pela API em localhost:8080/docs.
+- Containers: explicação do Compose, imagem, usuário e volume.
+- Kubernetes: Deployments, Services, configuração e probes.
+- Pipeline CI/CD: execução aprovada no GitHub Actions.
+- Deploy: justificativa do rolling update.
+- Observabilidade: Prometheus, Jaeger e explicação dos logs.
+- Escalabilidade: HPA e resultado real do teste local.
 
 PUBLICAÇÃO
-Publique no YouTube como não listado e confira o link em uma janela sem login. Use scripts/definir_video.py para registrar a URL real e gere novamente os PDFs. Confirme duração menor ou igual a 4 minutos.
+Ensaie com cronômetro. Prefira explicar o fluxo e as escolhas a mostrar muitos arquivos. Publique o vídeo no YouTube como não listado e confira que tem até 4 minutos. Depois envie a URL real para incluirmos no README e nos PDFs e finalizarmos a entrega.
