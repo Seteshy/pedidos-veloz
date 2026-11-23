@@ -1,0 +1,42 @@
+ROTEIRO DO PITCH
+Meta: aproximadamente 3 minutos e 40 segundos; limite da atividade: 4 minutos.
+Leia antes, ensaie com cronômetro e fale com suas palavras. Não diga que executou algo se estiver apenas mostrando a configuração.
+
+PREPARAÇÃO
+Abra o Docker Desktop, suba o Compose conforme o README e confira docker compose ps. Deixe abertos: README com arquitetura, http://localhost:8080/docs, http://localhost:9090, http://localhost:16686 e o workflow .github/workflows/ci-cd.yml. Aumente a fonte do terminal. Não mostre .env nem credenciais. Verifique se há estoque para a demonstração.
+
+0:00 A 0:25 — APRESENTAÇÃO E PROBLEMA
+Tela: README, diagrama da arquitetura.
+Fala sugerida: “Olá, sou Arthur Lima Pereira, estudante de Análise e Desenvolvimento de Sistemas da UNIFECAF. Neste trabalho, desenvolvi o MVP Pedidos Veloz para o cenário da Loja Veloz. A proposta é padronizar o ambiente e mostrar como automatizar a entrega e acompanhar falhas entre serviços.”
+
+0:25 A 0:55 — ARQUITETURA E CONTAINERS
+Tela: diagrama e docker compose ps.
+Fala: “O cliente acessa o gateway, que encaminha os pedidos. O serviço de pedidos chama estoque e pagamentos. O pagamento é simulado, sem transação financeira real. O PostgreSQL mantém os dados em um volume. Usei uma imagem Python em quatro serviços, com usuário sem privilégios e build em duas etapas. O Compose sobe o ambiente com um comando.”
+Se o ambiente não tiver sido executado, substitua a última frase por: “O arquivo Compose descreve a subida com um comando; estou apresentando a configuração de forma conceitual.”
+
+0:55 A 1:35 — PEDIDO E TESTE
+Tela: PowerShell. Execute os comandos de criar e consultar pedido do README. Mostre o status retornado. Depois repita a criação com o mesmo corpo, explicando que a reserva não deve ser duplicada.
+Fala após execução confirmada: “Este pedido foi confirmado e pode ser consultado pelo ID. Repetir o mesmo pedido não repete o desconto de estoque. Também preparei tratamento para estoque insuficiente e devolução da reserva quando o pagamento simulado é recusado. Um timeout exige revisão, porque o serviço remoto pode ter concluído a operação.”
+Alternativa conceitual: mostre process_order e o teste de compensação. Diga: “Estes são os caminhos implementados e os testes unitários; esta tela não comprova integração com o banco.”
+
+1:35 A 2:10 — OBSERVABILIDADE
+Tela: Jaeger. Selecione gateway, busque um trace recente e abra os spans. Em Prometheus, mostre sum by (service) (rate(veloz_http_requests_total[1m])). Aguarde uma ou duas coletas após os pedidos.
+Fala se houver dados: “O OpenTelemetry propaga o contexto entre os serviços e envia spans ao Collector e ao Jaeger. Isso permite acompanhar a mesma requisição. O Prometheus coleta métricas de requisições e duração. Os logs JSON também incluem o identificador do trace.”
+Sem dados: mostre telemetry.py e observability/. Diga “Esta é a instrumentação e a configuração de coleta; a visualização ainda precisa ser validada no ambiente.”
+
+2:10 A 2:50 — KUBERNETES, DEPLOY E ESCALA
+Tela: k8s/base/pedidos.yaml e pedidos-hpa.yaml.
+Fala: “Para Kubernetes, defini Deployments, Services, ConfigMap e Secret. Readiness controla o recebimento de tráfego e liveness detecta falha do processo. O rolling update troca as réplicas gradualmente. O HPA foi configurado para duas a quatro réplicas, com alvo inicial de 70% de CPU, e depende do Metrics Server. Esse valor precisa ser calibrado com carga. O banco de uma réplica é uma simplificação do laboratório.”
+Não afirme que o HPA escalou se isso não foi observado.
+
+2:50 A 3:25 — PIPELINE E IAC
+Tela: workflow, depois infra/main.tf.
+Fala: “O pipeline prevê lint, testes, build, smoke no Compose e teste de implantação em kind. Depois publica a imagem no GHCR com o identificador do commit. O deploy persistente é opcional e usa credencial em Secret do GitHub. O esqueleto Terraform cria o namespace em um cluster existente, sem contratar nuvem.”
+Se o workflow não tiver rodado: “A configuração está preparada; ainda não tenho uma execução remota para apresentar.”
+
+3:25 A 3:45 — REFERÊNCIA E LIMITES
+Tela: referências do README.
+Fala: “Usei como referência pública o Online Boutique, do Google Cloud, e as unidades da disciplina. Mantive o projeto menor para explicar cada etapa. Para produção, faltariam pagamento real, conciliação automática, banco com alta disponibilidade, backup e segurança mais completa. A principal contribuição do projeto é organizar desenvolvimento, entrega e observação em um fluxo reproduzível.”
+
+PUBLICAÇÃO
+Publique no YouTube como não listado e confira o link em uma janela sem login. Use scripts/definir_video.py para registrar a URL real e gere novamente os PDFs. Confirme duração menor ou igual a 4 minutos.

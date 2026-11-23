@@ -1,0 +1,47 @@
+VALIDAÇÃO DO PROJETO
+Atualização: 23/11/2026
+
+PREPARAÇÃO INICIAL EM 22/11/2026
+- 11 testes unitários e lint Ruff passaram. Banco e chamadas remotas simulados nesses testes.
+- docker compose config --quiet e kubectl kustomize k8s/base passaram.
+
+EXECUÇÃO LOCAL EM 23/11/2026
+- Docker Desktop iniciou após habilitar VirtualMachinePlatform e reiniciar o Windows.
+- Build da imagem Linux e inicialização dos oito contêineres do Compose concluídos.
+- Smoke contra serviços e PostgreSQL real: PASS.
+- Confirmação, consulta, idempotência, recusa de pagamento com compensação, produto inexistente e rejeição de quantidade inválida verificados.
+- Estoque didático antes/depois: 100/99.
+- Pedido confirmado no teste: e60a529a-2e51-4c5f-8e28-9d56fef5d607.
+- Prometheus: quatro alvos de aplicação com up=1.
+- Jaeger: trace ee852814ef815ef2e433571bb032428c com os quatro serviços.
+
+EVIDÊNCIAS
+- evidencias/compose-inicializacao.log
+- evidencias/compose-status.txt
+- evidencias/smoke.json
+- evidencias/observabilidade.json
+
+EXECUÇÃO KUBERNETES E TERRAFORM EM 23/11/2026
+- kind 0.31.0, nó Kubernetes 1.34.3, API restrita a localhost.
+- Terraform 1.11.4: fmt, validate, plan e apply passaram; somente namespace criado. A repetição do plano resultou em No changes.
+- Imagens importadas como arquivo Linux amd64 para compatibilidade com Docker containerd.
+- Quatro Deployments disponíveis; duas réplicas iniciais de cada serviço; PVC Bound.
+- Smoke Kubernetes: PASS, incluindo compensação e idempotência.
+- Metrics Server 0.8.0 instalado com exceção kubelet-insecure-tls somente neste laboratório.
+- Carga HTTP: 180 segundos, 3422 respostas bem-sucedidas, 0 erros no gerador.
+- HPA: Gateway e Estoque chegaram a quatro réplicas e retornaram a duas após a carga; os demais ficaram em duas. Evidência: hpa-retorno.json.
+- Pod Security Admission rejeitou pod root em dry-run, sem criar o pod.
+- NetworkPolicy: Pedidos -> Pagamentos permitido; Gateway -> Pagamentos bloqueado.
+- Esses testes não medem capacidade comercial nem substituem homologação de produção.
+
+EVIDÊNCIAS ADICIONAIS
+- evidencias/kubernetes-status.txt e kubernetes-smoke.json
+- evidencias/terraform-plano.txt, terraform-aplicacao.txt e terraform-validacao.txt
+- evidencias/hpa-carga.json, hpa-eventos.txt e carga-http.json
+- evidencias/pod-security-admission.txt e networkpolicy-*.json
+
+PENDENTE
+- Publicação do repositório e execução do GitHub Actions.
+- Gravação e publicação do pitch; inserir URL real e regenerar PDFs.
+
+Os resultados são de laboratório local. Não representam desempenho comercial ou implantação em nuvem.

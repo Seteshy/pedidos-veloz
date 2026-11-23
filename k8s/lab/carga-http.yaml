@@ -1,0 +1,95 @@
+# Demonstracao de HPA com consultas HTTP; nao e um benchmark de capacidade.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: carga-http
+  namespace: veloz
+data:
+  carga.py: "import concurrent.futures\nimport json\nimport os\nimport threading\n\
+    import time\nimport urllib.error\nimport urllib.request\n\ntarget = os.getenv(\"\
+    TARGET_URL\", \"http://gateway:8000/stock\")\nseconds = int(os.getenv(\"DURATION_SECONDS\"\
+    , \"180\"))\nworkers = int(os.getenv(\"WORKERS\", \"12\"))\nuntil = time.monotonic()\
+    \ + seconds\ncounts = {\"ok\": 0, \"errors\": 0}\nlock = threading.Lock()\n\n\
+    def worker():\n    while time.monotonic() < until:\n        key = \"errors\"\n\
+    \        try:\n            with urllib.request.urlopen(target, timeout=8) as response:\n\
+    \                response.read()\n                if response.status == 200:\n\
+    \                    key = \"ok\"\n        except (OSError, urllib.error.HTTPError):\n\
+    \            pass\n        with lock:\n            counts[key] += 1\n\nwith concurrent.futures.ThreadPoolExecutor(max_workers=workers)\
+    \ as pool:\n    list(pool.map(lambda _: worker(), range(workers)))\nprint(json.dumps({\"\
+    duration_seconds\": seconds, \"workers\": workers, **counts}))\n"
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-gateway-carga-lab
+  namespace: veloz
+spec:
+  podSelector:
+    matchLabels:
+      app: gateway
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: carga-http
+    ports:
+    - port: 8000
+      protocol: TCP
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: carga-http
+  namespace: veloz
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 240
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        app: carga-http
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: carga
+        image: pedidos-veloz/app:0.1.0
+        imagePullPolicy: IfNotPresent
+        command:
+        - python
+        - -u
+        - /scripts/carga.py
+        env:
+        - name: DURATION_SECONDS
+          value: '180'
+        - name: WORKERS
+          value: '12'
+        resources:
+          requests:
+            cpu: 100m
+            memory: 64Mi
+          limits:
+            cpu: 500m
+            memory: 128Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: script
+          mountPath: /scripts
+          readOnly: true
+      volumes:
+      - name: script
+        configMap:
+          name: carga-http

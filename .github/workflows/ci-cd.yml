@@ -1,0 +1,154 @@
+name: validar-publicar-implantar
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - run: ruff check .
+      - run: python -m unittest discover -s tests -v
+      - name: Validar e executar Compose com dados didaticos
+        env:
+          POSTGRES_PASSWORD: ci-ephemeral-only
+        run: |
+          docker compose config --quiet
+          docker compose up -d --build --wait --wait-timeout 300
+          mkdir -p evidencias
+          python scripts/smoke.py | tee evidencias/smoke.json
+      - name: Logs do ambiente de teste
+        if: always()
+        run: |
+          mkdir -p evidencias
+          docker compose logs --no-color > evidencias/compose.log 2>&1 || true
+        env:
+          POSTGRES_PASSWORD: ci-ephemeral-only
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: evidencias-compose
+          path: evidencias/
+      - name: Encerrar ambiente efemero de CI
+        if: always()
+        run: docker compose down -v
+        env:
+          POSTGRES_PASSWORD: ci-ephemeral-only
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.11.4'
+      - run: terraform -chdir=infra fmt -check -recursive
+      - run: terraform -chdir=infra init -backend=false
+      - run: terraform -chdir=infra validate
+  kubernetes-laboratorio:
+    needs: validar
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: helm/kind-action@v1.12.0
+        with:
+          cluster_name: veloz-ci
+          version: v0.31.0
+          kubectl_version: v1.34.1
+          node_image: kindest/node:v1.34.3@sha256:08497ee19eace7b4b5348db5c6a1591d7752b164530a36f855cb0f2bdcbadd48
+          wait: 180s
+      - run: |
+          docker build -t pedidos-veloz/app:0.1.0 .
+          docker image save --platform=linux/amd64 -o /tmp/veloz-app.tar pedidos-veloz/app:0.1.0
+          kind load image-archive /tmp/veloz-app.tar --name veloz-ci
+          kubectl apply -f k8s/namespace.yaml
+          kubectl -n veloz create secret generic database --from-literal=password=ci-ephemeral-only
+          kubectl apply -k k8s/base
+          kubectl -n veloz rollout status statefulset/db --timeout=240s
+          for svc in gateway pedidos estoque pagamentos; do
+            kubectl -n veloz rollout status deployment/$svc --timeout=240s
+          done
+          kubectl -n veloz port-forward service/gateway 8080:8000 > /tmp/forward.log 2>&1 &
+          python - <<'PY'
+          import time, urllib.request
+          for _ in range(30):
+              try:
+                  urllib.request.urlopen('http://localhost:8080/health/live', timeout=2)
+                  break
+              except OSError:
+                  time.sleep(1)
+          else:
+              raise SystemExit('gateway indisponivel')
+          PY
+          python scripts/smoke.py
+      - name: Diagnostico do cluster de teste
+        if: always()
+        run: |
+          kubectl -n veloz get pods,hpa,pvc
+          kubectl -n veloz get events --sort-by=.lastTimestamp
+  publicar:
+    needs: [validar, kubernetes-laboratorio]
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.name.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: name
+        shell: bash
+        run: echo "image=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.name.outputs.image }}:sha-${{ github.sha }}
+  deploy:
+    needs: publicar
+    if: github.ref == 'refs/heads/main' && vars.ENABLE_DEPLOY == 'true'
+    runs-on: ubuntu-latest
+    environment: laboratorio
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-kubectl@v4
+        with:
+          version: 'v1.34.1'
+      - name: Aplicar a imagem validada
+        env:
+          KUBECONFIG_B64: ${{ secrets.KUBECONFIG_B64 }}
+          IMAGE: ${{ needs.publicar.outputs.image }}:sha-${{ github.sha }}
+        shell: bash
+        run: |
+          test -n "$KUBECONFIG_B64"
+          export KUBECONFIG="$RUNNER_TEMP/kubeconfig"
+          trap 'rm -f "$KUBECONFIG"' EXIT
+          printf '%s' "$KUBECONFIG_B64" | base64 --decode > "$KUBECONFIG"
+          chmod 600 "$KUBECONFIG"
+          kubectl -n veloz get secret database >/dev/null
+          cd k8s/base
+          kubectl kustomize . >/dev/null
+          python - "$IMAGE" <<'PY'
+          import pathlib, sys
+          path = pathlib.Path('kustomization.yaml')
+          path.write_text(path.read_text() + '\nimages:\n- name: pedidos-veloz/app\n  newName: ' + sys.argv[1].rsplit(':', 1)[0] + '\n  newTag: ' + sys.argv[1].rsplit(':', 1)[1] + '\n')
+          PY
+          kubectl apply -k .
+          for svc in gateway pedidos estoque pagamentos; do
+            kubectl -n veloz rollout status deployment/$svc --timeout=180s
+          done

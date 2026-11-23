@@ -1,0 +1,370 @@
+{
+  "video_url": null,
+  "references": {
+    "1": {
+      "text": "UNIFECAF. Cloud DevOps Orchestrating Containers and Micro Services. Unidades 1 a 4. Material didático fornecido na disciplina, s.d."
+    },
+    "2": {
+      "text": "WIGGINS, Adam. The Twelve Factor App. Consulta em 22 nov. 2026.",
+      "url": "https://12factor.net/",
+      "label": "Metodologia oficial"
+    },
+    "3": {
+      "text": "DOCKER. Multi stage builds. Consulta em 22 nov. 2026.",
+      "url": "https://docs.docker.com/build/building/multi-stage/",
+      "label": "Documentação oficial"
+    },
+    "4": {
+      "text": "KUBERNETES. Deployments. Consulta em 22 nov. 2026.",
+      "url": "https://kubernetes.io/docs/concepts/workloads/controllers/deployment/",
+      "label": "Documentação oficial"
+    },
+    "5": {
+      "text": "KUBERNETES. Horizontal Pod Autoscaling. Consulta em 22 nov. 2026.",
+      "url": "https://kubernetes.io/docs/concepts/workloads/autoscaling/horizontal-pod-autoscale/",
+      "label": "Documentação oficial"
+    },
+    "6": {
+      "text": "OPENTELEMETRY. Signals e Getting Started by Example em Python. Consulta em 22 nov. 2026.",
+      "url": "https://opentelemetry.io/docs/languages/python/getting-started/",
+      "label": "Documentação oficial"
+    },
+    "7": {
+      "text": "GITHUB. Publishing Docker images. Consulta em 22 nov. 2026.",
+      "url": "https://docs.github.com/en/actions/tutorials/publish-packages/publish-docker-images",
+      "label": "Documentação oficial"
+    },
+    "8": {
+      "text": "HASHICORP. Terraform State. Consulta em 22 nov. 2026.",
+      "url": "https://developer.hashicorp.com/terraform/language/state",
+      "label": "Documentação oficial"
+    },
+    "9": {
+      "text": "GOOGLE CLOUD PLATFORM. Online Boutique microservices demo. Repositório público. Consulta em 22 nov. 2026.",
+      "url": "https://github.com/GoogleCloudPlatform/microservices-demo",
+      "label": "Repositório de referência"
+    },
+    "10": {
+      "text": "KUBERNETES. Pod Security Admission. Consulta em 22 nov. 2026.",
+      "url": "https://kubernetes.io/docs/concepts/security/pod-security-admission/",
+      "label": "Documentação oficial"
+    },
+    "11": {
+      "text": "DOCKER. Control startup and shutdown order in Compose. Consulta em 22 nov. 2026.",
+      "url": "https://docs.docker.com/compose/how-tos/startup-order/",
+      "label": "Documentação oficial"
+    },
+    "12": {
+      "text": "KIND. Quick Start. Consulta em 23 nov. 2026.",
+      "url": "https://kind.sigs.k8s.io/docs/user/quick-start/",
+      "label": "Documentação oficial"
+    },
+    "13": {
+      "text": "KUBERNETES SIGS. Metrics Server versão 0.8.0. Consulta em 23 nov. 2026.",
+      "url": "https://github.com/kubernetes-sigs/metrics-server/tree/v0.8.0",
+      "label": "Repositório oficial"
+    }
+  },
+  "theory": {
+    "title": "Entrega contínua da plataforma Pedidos Veloz",
+    "pages": [
+      [
+        [
+          "heading",
+          "1 Contexto e objetivo"
+        ],
+        [
+          "body",
+          "Este trabalho apresenta a base teórica do projeto Pedidos Veloz, desenvolvido para o cenário acadêmico de uma loja com dificuldades de implantação, escala e diagnóstico de falhas. A proposta combina ambiente local com Docker Compose, organização da execução em Kubernetes, pipeline de CI/CD e telemetria. O objetivo é demonstrar como essas práticas podem reduzir erros manuais e facilitar a operação. Os benefícios são objetivos da solução; não representam resultados de desempenho já medidos."
+        ],
+        [
+          "heading",
+          "2 Microsserviços e o papel do DevOps"
+        ],
+        [
+          "body",
+          "Uma arquitetura de microsserviços organiza o sistema em serviços com responsabilidades delimitadas, que se comunicam por interfaces de rede. No projeto, o gateway recebe as requisições, Pedidos coordena o fluxo, Estoque controla as reservas e Pagamentos representa uma integração financeira simulada. Essa divisão permite pensar em evolução e escala por responsabilidade, mas também adiciona dependências de rede e falhas parciais. Um serviço pode ficar indisponível mesmo quando os demais continuam funcionando [1]."
+        ],
+        [
+          "body",
+          "Por isso, dividir a aplicação não resolve sozinho os problemas da empresa. É necessário definir contratos, tratar timeouts, testar a comunicação e acompanhar a requisição entre os componentes. Uma operação de compra envolve efeitos em mais de um serviço, sem uma transação única que garanta automaticamente todo o processo. No MVP, uma recusa explícita de pagamento devolve a reserva; situações de resultado incerto são sinalizadas para revisão. Essa limitação é importante para não prometer consistência que a implementação não oferece."
+        ],
+        [
+          "body",
+          "DevOps aproxima desenvolvimento e operação em um ciclo de responsabilidade compartilhada. O código, a configuração e as verificações passam a ser versionados e executados de forma previsível. A equipe não termina seu trabalho ao gerar uma imagem: também precisa verificar como a aplicação será implantada, observada e recuperada. As unidades da disciplina relacionam essa colaboração à automação e à melhoria contínua [1]."
+        ],
+        [
+          "heading",
+          "3 Princípios cloud native"
+        ],
+        [
+          "body",
+          "A metodologia Twelve Factor orienta a separação entre código e configuração, o uso de processos sem estado local e o tratamento de logs como fluxos de eventos [2]. No projeto, endereços e credenciais são recebidos pelo ambiente, o PostgreSQL mantém o estado persistente e as aplicações enviam logs à saída padrão. Isso facilita substituir um contêiner sem depender dos arquivos gravados nele. A aproximação entre desenvolvimento e produção ocorre pelo uso da mesma imagem, ainda que escala e infraestrutura sejam diferentes."
+        ]
+      ],
+      [
+        [
+          "heading",
+          "4 Conteinerização e orquestração"
+        ],
+        [
+          "body",
+          "Uma imagem de contêiner reúne aplicação e dependências para executar um processo de forma padronizada. O Docker é usado para construir e executar essas imagens; o Docker Compose descreve vários serviços, suas redes, volumes e configurações em um ambiente local. No MVP, essa abordagem evita que cada componente precise ser instalado manualmente na máquina do estudante. Healthchecks e dependências de inicialização reduzem o risco de iniciar os serviços antes de o banco estar pronto [3, 11]."
+        ],
+        [
+          "body",
+          "Kubernetes gerencia aplicações conteinerizadas em um cluster. O Pod é a unidade de execução; o Deployment mantém as réplicas e organiza atualizações; o Service fornece um endereço estável para acessar os pods [4]. Docker e Kubernetes têm papéis complementares: a imagem criada no processo de build pode ser usada pelo cluster, que cuida da execução distribuída. Para este trabalho, Compose atende ao desenvolvimento e à demonstração local, enquanto os manifests Kubernetes representam a base de implantação e escala."
+        ],
+        [
+          "body",
+          "A imagem utiliza duas etapas: instalação de dependências em ambiente separado e cópia do necessário para a etapa de execução. A aplicação executa como usuário sem privilégios. Esses cuidados reduzem componentes e permissões desnecessários, mas não garantem uma imagem livre de vulnerabilidades. Versionar as dependências diretas e identificar a imagem pelo commit ajuda a relacionar uma implantação ao código que a originou [3, 7]."
+        ],
+        [
+          "heading",
+          "5 CI CD e controle de mudanças"
+        ],
+        [
+          "body",
+          "Integração contínua verifica as alterações com tarefas automatizadas, como lint, testes e build. Entrega contínua mantém uma versão validada disponível para implantação; a promoção ao ambiente pode incluir decisões e condições adicionais. Em microsserviços, testar somente funções isoladas é insuficiente: também é importante verificar o fluxo entre serviços e o banco. O pipeline do projeto inclui testes unitários, um smoke com Compose e um teste em Kubernetes de laboratório antes da publicação da imagem [1, 7]."
+        ],
+        [
+          "body",
+          "A estratégia escolhida é rolling update, que substitui pods gradualmente. Readiness indica se uma réplica pode receber tráfego; liveness verifica se o processo continua respondendo. A configuração evita indisponibilizar réplicas antigas antes de as novas estarem prontas, desde que haja capacidade no cluster [4]. Isso reduz o risco do deploy, mas não elimina falhas de contrato ou mudanças incompatíveis no banco. O rollback de uma imagem também não desfaz alterações nos dados."
+        ],
+        [
+          "body",
+          "O Terraform complementa a automação ao descrever infraestrutura como código. Seu estado associa a configuração aos recursos existentes e precisa ser protegido [8]. Neste trabalho, o esqueleto cria um namespace em cluster existente, com módulo e variáveis. Essa escolha demonstra a estrutura da ferramenta sem contratar recursos de nuvem."
+        ]
+      ],
+      [
+        [
+          "heading",
+          "6 Observabilidade e decisões adotadas"
+        ],
+        [
+          "body",
+          "Métricas resumem o comportamento ao longo do tempo, como taxa de requisições e duração. Logs registram eventos e contexto de execução. Traces agrupam spans para acompanhar uma requisição entre serviços [6]. No projeto, Prometheus coleta métricas, os serviços emitem logs JSON e OpenTelemetry envia traces ao Collector e ao Jaeger. O identificador do trace permite relacionar os registros da mesma chamada. O conjunto de visualização foi configurado no Compose; sua implantação no cluster fica como etapa adicional."
+        ],
+        [
+          "body",
+          "O HPA por CPU foi escolhido para demonstrar escala horizontal dos serviços, com requests definidos e alvo inicial de utilização. Seu funcionamento depende do Metrics Server e da capacidade disponível; o limite de réplicas não comprova que o sistema atende a um pico real [5]. Não foi adotado VPA no MVP, para evitar acrescentar outro mecanismo antes de medir o consumo. Service mesh e mensageria também foram deixados como evolução, pois aumentariam o escopo sem serem necessários para demonstrar o fluxo principal."
+        ],
+        [
+          "heading",
+          "7 Exemplo público e relação com o projeto"
+        ],
+        [
+          "body",
+          "O Online Boutique, mantido no repositório público GoogleCloudPlatform/microservices-demo, demonstra uma loja distribuída executada com Kubernetes [9]. Ele é uma referência concreta de decomposição funcional e implantação de um comércio eletrônico. O Pedidos Veloz utiliza essa ideia de separação de responsabilidades em uma implementação própria e menor. Não foram copiados resultados de disponibilidade, escala ou desempenho do exemplo. O banco único e o pagamento simulado são simplificações explícitas para permitir compreender o trabalho dentro do escopo acadêmico."
+        ],
+        [
+          "references",
+          [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            11
+          ]
+        ],
+        [
+          "video",
+          ""
+        ]
+      ]
+    ]
+  },
+  "practice": {
+    "title": "Implementação do MVP Pedidos Veloz",
+    "pages": [
+      [
+        [
+          "heading",
+          "1 Proposta e organização do MVP"
+        ],
+        [
+          "body",
+          "O Pedidos Veloz foi estruturado como um MVP acadêmico para o cenário da Loja Veloz. A proposta cobre desenvolvimento local, criação de imagem, configuração de Kubernetes, automação de entrega e observabilidade. O repositório reúne código Python/FastAPI, Dockerfile, Compose, SQL, manifests, pipeline, esqueleto Terraform, testes e instruções de execução. A implementação mantém um tamanho que permite explicar o papel de cada componente sem depender de serviços pagos."
+        ],
+        [
+          "body",
+          "O cliente acessa o Gateway, que encaminha a solicitação a Pedidos; este serviço chama Estoque e Pagamentos. Pedidos registra a solicitação, solicita a reserva e consulta o pagamento simulado. O PostgreSQL armazena pedidos, estoque, reservas e pagamentos. A imagem é compartilhada entre quatro processos independentes, e SERVICE_ROLE seleciona as rotas expostas por cada serviço. Essa organização facilita a manutenção do MVP, embora as versões sejam publicadas em conjunto. Em uma evolução, os serviços poderiam ter releases independentes."
+        ],
+        [
+          "heading",
+          "2 Comportamento do pedido"
+        ],
+        [
+          "body",
+          "Cada pedido recebe um UUID informado pelo cliente. Após reserva e aprovação do pagamento, o estado passa a CONFIRMED. Falta de estoque produz REJECTED_STOCK; recusa do pagamento produz REJECTED_PAYMENT após devolver a reserva. Se houver timeout ou resposta inválida de uma dependência, o pedido passa a MANUAL_REVIEW, pois o efeito remoto pode já ter ocorrido. Uma interrupção abrupta do processo pode deixá-lo PENDING. Não há conciliador automático; esses casos exigem verificação manual."
+        ],
+        [
+          "body",
+          "Reenviar o mesmo ID com os mesmos dados retorna o pedido armazenado e não repete o fluxo. Dados diferentes para um ID existente geram conflito. No estoque, a redução condicional da quantidade e a reserva ocorrem na mesma transação. O controle de concorrência evita que uma reserva seja repetida pelo mesmo ID ou que a quantidade se torne negativa. Os pagamentos são exclusivamente simulados e não utilizam cartões, valores financeiros ou credenciais de terceiros. O saldo inicial de 100 camisetas é apenas massa de teste."
+        ],
+        [
+          "heading",
+          "3 Referência e simplificações"
+        ],
+        [
+          "body",
+          "O exemplo público utilizado é o Online Boutique, do Google Cloud, uma aplicação de loja em microsserviços para Kubernetes [9]. O projeto adota a separação de responsabilidades como referência, com código próprio e menos componentes. O banco e a credencial compartilhados simplificam a demonstração; em produção, seria necessário isolar permissões por serviço. Também seriam necessários pagamento real, autenticação, conciliação, backup e análise de capacidade. As unidades da disciplina apoiam as decisões sobre automação, contêineres e operação [1]."
+        ]
+      ],
+      [
+        [
+          "heading",
+          "4 Ambiente local e construção da imagem"
+        ],
+        [
+          "body",
+          "O Compose define gateway, pedidos, estoque, pagamentos, PostgreSQL, Prometheus, Collector e Jaeger. Após copiar .env.example para .env e escolher uma senha local, o ambiente é iniciado com docker compose up -d --build --wait --wait-timeout 300. O README apresenta os pré-requisitos, comandos e verificações. O banco tem healthcheck, e os serviços aguardam a disponibilidade das dependências antes da inicialização [11]."
+        ],
+        [
+          "body",
+          "A rede backend fornece nomes para comunicação interna. Apenas gateway e interfaces de observabilidade publicam portas, restritas ao localhost. O volume postgres-data mantém os dados quando os contêineres são recriados. O arquivo db/init.sql cria as tabelas e a massa didática na primeira inicialização de um volume vazio. Ele não substitui um sistema de migrações, e alterar esse arquivo não modifica automaticamente um banco já inicializado."
+        ],
+        [
+          "body",
+          "O Dockerfile usa uma etapa de build para instalar as dependências em um ambiente virtual e uma etapa final para executar a aplicação. A imagem final recebe o ambiente e o código, com usuário UID 10001, sem necessidade de root [3]. O Compose configura filesystem somente leitura, diretório temporário em memória, remoção de capabilities e bloqueio de elevação de privilégios para as aplicações. O PostgreSQL usa sua imagem oficial e volume próprio."
+        ],
+        [
+          "body",
+          "A imagem local usa a versão 0.1.0. No pipeline, a imagem publicada recebe a tag sha seguida do commit, permitindo identificar o código de origem. As versões das dependências diretas estão fixadas. As imagens base e dependências transitivas não estão integralmente fixadas por digest ou lock, portanto não se afirma reprodução idêntica byte a byte. Uma melhoria seria manter lock revisado, atualizar versões e incluir análise de vulnerabilidades."
+        ],
+        [
+          "heading",
+          "5 Execução e verificação do fluxo"
+        ],
+        [
+          "body",
+          "O gateway expõe documentação interativa em localhost:8080/docs. O estudante pode criar um pedido, consultar seu ID e verificar o estoque. O script scripts/smoke.py faz essas chamadas por HTTP contra o ambiente real, utilizando IDs novos. Ele verifica confirmação, consulta, repetição do ID, produto inexistente e rejeição de quantidade inválida. Também verifica devolução de reserva após pagamento recusado quando há pelo menos duas unidades disponíveis no início do teste. A execução consome uma unidade para o pedido confirmado."
+        ],
+        [
+          "body",
+          "Os testes unitários verificam validação de entrada, encaminhamento do gateway, indisponibilidade de dependências e caminhos do fluxo de pedidos. Neles, banco e chamadas remotas são simulados, para verificar as decisões do código de forma isolada. O smoke é uma verificação diferente: depende do Compose ou do gateway acessível por port-forward e deve ser executado antes de afirmar que a integração completa funcionou."
+        ]
+      ],
+      [
+        [
+          "heading",
+          "6 Kubernetes e segurança"
+        ],
+        [
+          "body",
+          "A pasta k8s/base organiza Deployments, Services, HPA, PodDisruptionBudgets, StatefulSet do banco e NetworkPolicies. O Kustomize gera ConfigMaps para a configuração e o SQL inicial. A senha é consumida por referência ao Secret database, criado fora do código. O namespace é provisionado separadamente. Os serviços ficam internos ao cluster; o acesso de demonstração utiliza port-forward, sem publicar uma aplicação na internet."
+        ],
+        [
+          "body",
+          "Cada aplicação começa com duas réplicas e possui requests de 100 millicores de CPU e 128 MiB de memória, com limites de 500 millicores e 256 MiB. Esses números são configurações iniciais didáticas, não resultado de dimensionamento. Startup probe permite o início do processo; readiness verifica se ele está apto a receber tráfego; liveness verifica a resposta do processo sem depender da saúde de serviços externos. Essa separação evita reiniciar indiscriminadamente as aplicações por uma falha remota."
+        ],
+        [
+          "body",
+          "O namespace aplica Pod Security Admission restricted, fixado na versão v1.34 [10]. Os pods não recebem automaticamente token de ServiceAccount, bloqueiam elevação de privilégios, usam seccomp RuntimeDefault e removem capabilities. As aplicações executam como UID 10001. O PostgreSQL Alpine executa como UID/GID 70, com fsGroup e volumes graváveis. A política de rede nega ingresso por padrão e libera os fluxos entre os serviços. Sua efetividade depende de um CNI que implemente NetworkPolicy. Saída de rede não está restringida neste MVP."
+        ],
+        [
+          "body",
+          "O PostgreSQL tem uma réplica e PVC de 1 GiB. Isso preserva dados entre substituições do pod, mas não oferece alta disponibilidade ou cópia de segurança. Um cluster real também exige política de acesso, armazenamento adequado e proteção dos Secrets: codificação em base64 não é criptografia. O exemplo de Secret no repositório não deve ser aplicado com a senha ilustrativa."
+        ],
+        [
+          "heading",
+          "7 Atualização escala e infraestrutura como código"
+        ],
+        [
+          "body",
+          "O rolling update usa maxUnavailable igual a zero e maxSurge igual a um [4]. O HPA varia de duas a quatro réplicas por serviço e usa alvo inicial de 70% de CPU em relação ao request [5]. Ele depende do Metrics Server, de recursos disponíveis e de testes de carga. Não há autoscaling do banco. Um PDB mantém ao menos uma réplica durante interrupções voluntárias compatíveis; ele não resolve falhas físicas ou falta de capacidade."
+        ],
+        [
+          "body",
+          "O Terraform utiliza provider Kubernetes, variáveis e módulo para criar o namespace em cluster existente. Essa etapa foi executada localmente, sem provisionar nuvem. O state fica fora do Git; para uma equipe, exige backend remoto protegido e locking [8]. A configuração do kind e o script de inicialização acompanham o projeto. O Metrics Server usa uma exceção de validação do certificado kubelet apenas no laboratório; em produção, devem ser usados certificados confiáveis."
+        ]
+      ],
+      [
+        [
+          "heading",
+          "8 Pipeline de integração e entrega"
+        ],
+        [
+          "body",
+          "O workflow do GitHub Actions começa por lint com Ruff e testes unitários. Em seguida, constrói a imagem, inicia o Compose e executa o smoke; logs e saída do teste são publicados como artefatos de evidência. Também executa fmt e validate do Terraform. Um job posterior cria cluster kind efêmero, carrega a imagem, aplica os manifests, aguarda os rollouts e executa outro smoke. Assim, o código descreve verificações antes da publicação, sem considerar apenas um build bem sucedido."
+        ],
+        [
+          "body",
+          "Após os jobs anteriores, a imagem é publicada no GitHub Container Registry com GITHUB_TOKEN e permissões de escrita em packages [7]. Pull requests validam o projeto, mas não publicam a imagem. O deploy em cluster persistente fica desabilitado por padrão e só é ativado com variável explícita. Ele utiliza kubeconfig em Secret do GitHub e aguarda o rollout. Essa etapa exige cluster alcançável pelo runner, namespace e Secret do banco já existentes, além de acesso ao registry. Um cluster local normalmente não pode ser acessado diretamente pelo runner hospedado."
+        ],
+        [
+          "body",
+          "Para a demonstração sem nuvem, o caminho é Compose e, após configurar as ferramentas, Kubernetes local. O cluster kind do CI serve para teste de implantação e é descartado ao final do job; não representa um ambiente de produção disponível. Esse teste não instala Metrics Server nem comprova aplicação das políticas de rede pelo CNI. As actions usam tags de versão; fixar por SHA revisado é uma melhoria de segurança. Scan de vulnerabilidades não foi incluído, por ser opcional no enunciado."
+        ],
+        [
+          "heading",
+          "9 Observabilidade"
+        ],
+        [
+          "body",
+          "As aplicações expõem contadores de requisições e histogramas de duração em /metrics/. As labels usam o nome do serviço e o template da rota, evitando criar uma série por UUID. O Prometheus permite consultar taxa de requisições e estimar percentis de duração. Os logs JSON contêm serviço, rota, código HTTP, duração e trace_id. Não registram a senha do banco ou o corpo completo dos pedidos."
+        ],
+        [
+          "body",
+          "OpenTelemetry instrumenta FastAPI e HTTPX, propagando o contexto entre serviços. No Compose, os spans seguem por OTLP HTTP ao Collector e depois ao Jaeger [6]. A amostragem integral é útil para a pequena demonstração, mas deve ser revista em uma operação com mais tráfego. A configuração base de Kubernetes não instala esse conjunto nem ativa exportação OTLP: sua implantação, persistência, coleta e alertas são uma etapa adicional proposta para produção."
+        ],
+        [
+          "body",
+          "Não há service mesh ou mensageria no MVP. O fluxo síncrono foi escolhido para facilitar a explicação; timeouts não são corrigidos por retry automático. Como evolução, seria possível adicionar reconciliação de pedidos e eventos com entrega controlada. Isso deve vir acompanhado de testes, antes de aumentar a complexidade do sistema."
+        ]
+      ],
+      [
+        [
+          "heading",
+          "10 Validação de execução e limites"
+        ],
+        [
+          "body",
+          "Passaram 11 testes unitários, lint e smoke no Compose com PostgreSQL real. Em 23 de novembro de 2026, também foi criado o cluster kind local, com um nó Kubernetes 1.34.3 [12]. O Terraform passou em fmt e validate, e seu plano criou somente o namespace veloz. Os quatro Deployments ficaram disponíveis e o PVC do banco foi vinculado. O smoke no Kubernetes confirmou pedido, consulta, idempotência, recusa com compensação, falta de produto e entrada inválida. O Prometheus e o Jaeger foram verificados no ambiente Compose; a coleta no cluster não foi implantada."
+        ],
+        [
+          "body",
+          "Com Metrics Server [13], a carga de 180 segundos fez 3.422 consultas HTTP bem-sucedidas, sem erros registrados pelo gerador. O Gateway e o Estoque aumentaram de duas para quatro réplicas; Pedidos e Pagamentos permaneceram em duas. Após a carga, Gateway e Estoque retornaram a duas réplicas. Isso demonstra reação do HPA no laboratório e não comprova capacidade comercial. O Pod Security Admission rejeitou um pod root em dry-run. A política de rede permitiu Pedidos acessar Pagamentos e bloqueou o acesso direto do Gateway. As evidências estão em evidencias. Continuam pendentes o workflow no GitHub e o vídeo."
+        ],
+        [
+          "heading",
+          "11 Plano de evolução"
+        ],
+        [
+          "body",
+          "Para o horizonte de quatro semanas proposto no cenário, o plano sugerido é: primeira semana para aplicação e Compose; segunda para testes e manifests; terceira para pipeline e telemetria; quarta para testes de carga, revisão de segurança e demonstração. Trata-se de planejamento proposto, não de cronograma executado. Para a entrega acadêmica, o README e o roteiro orientam uma demonstração local ou, se necessário, conceitual, deixando explícito o que foi realmente observado."
+        ],
+        [
+          "body",
+          "Antes de operar comercialmente, seria necessário integrar provedor de pagamento, separar acessos aos dados, implementar autenticação, conciliação automática de pedidos, migrações compatíveis, backup e restauração testados. A operação também exigiria retenção de telemetria, alertas e critérios de capacidade definidos por medições. O MVP demonstra a estrutura do fluxo DevOps e permite verificar esses pontos de forma incremental."
+        ],
+        [
+          "references",
+          [
+            1,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13
+          ]
+        ],
+        [
+          "video",
+          ""
+        ]
+      ]
+    ]
+  }
+}

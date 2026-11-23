@@ -1,0 +1,39 @@
+[1] UNIFECAF. Cloud DevOps Orchestrating Containers and Micro Services. Unidades 1 a 4. Material didático fornecido na disciplina, s.d.
+Material fornecido pelo estudante.
+
+[2] WIGGINS, Adam. The Twelve Factor App. Consulta em 22 nov. 2026.
+https://12factor.net/
+
+[3] DOCKER. Multi stage builds. Consulta em 22 nov. 2026.
+https://docs.docker.com/build/building/multi-stage/
+
+[4] KUBERNETES. Deployments. Consulta em 22 nov. 2026.
+https://kubernetes.io/docs/concepts/workloads/controllers/deployment/
+
+[5] KUBERNETES. Horizontal Pod Autoscaling. Consulta em 22 nov. 2026.
+https://kubernetes.io/docs/concepts/workloads/autoscaling/horizontal-pod-autoscale/
+
+[6] OPENTELEMETRY. Signals e Getting Started by Example em Python. Consulta em 22 nov. 2026.
+https://opentelemetry.io/docs/languages/python/getting-started/
+
+[7] GITHUB. Publishing Docker images. Consulta em 22 nov. 2026.
+https://docs.github.com/en/actions/tutorials/publish-packages/publish-docker-images
+
+[8] HASHICORP. Terraform State. Consulta em 22 nov. 2026.
+https://developer.hashicorp.com/terraform/language/state
+
+[9] GOOGLE CLOUD PLATFORM. Online Boutique microservices demo. Repositório público. Consulta em 22 nov. 2026.
+https://github.com/GoogleCloudPlatform/microservices-demo
+
+[10] KUBERNETES. Pod Security Admission. Consulta em 22 nov. 2026.
+https://kubernetes.io/docs/concepts/security/pod-security-admission/
+
+[11] DOCKER. Control startup and shutdown order in Compose. Consulta em 22 nov. 2026.
+https://docs.docker.com/compose/how-tos/startup-order/
+
+[12] KIND. Quick Start. Consulta em 23 nov. 2026.
+https://kind.sigs.k8s.io/docs/user/quick-start/
+
+[13] KUBERNETES SIGS. Metrics Server versão 0.8.0. Consulta em 23 nov. 2026.
+https://github.com/kubernetes-sigs/metrics-server/tree/v0.8.0
+

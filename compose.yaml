@@ -1,0 +1,93 @@
+name: pedidos-veloz
+x-app: &app
+  build: .
+  image: pedidos-veloz/app:${IMAGE_TAG:-0.1.0}
+  restart: unless-stopped
+  init: true
+  read_only: true
+  tmpfs: [/tmp]
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  networks: [backend]
+  healthcheck:
+    test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready', timeout=3)"]
+    interval: 10s
+    timeout: 5s
+    retries: 12
+    start_period: 20s
+x-env: &env
+  DB_HOST: db
+  DB_NAME: veloz
+  DB_USER: veloz
+  DB_PASSWORD: ${POSTGRES_PASSWORD:?Copie .env.example para .env e defina POSTGRES_PASSWORD}
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+  OTEL_TRACES_SAMPLER: parentbased_always_on
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: veloz
+      POSTGRES_USER: veloz
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    networks: [backend]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U veloz -d veloz']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  estoque:
+    <<: *app
+    environment:
+      <<: *env
+      SERVICE_ROLE: estoque
+    depends_on:
+      db: {condition: service_healthy}
+  pagamentos:
+    <<: *app
+    environment:
+      <<: *env
+      SERVICE_ROLE: pagamentos
+    depends_on:
+      db: {condition: service_healthy}
+  pedidos:
+    <<: *app
+    environment:
+      <<: *env
+      SERVICE_ROLE: pedidos
+    depends_on:
+      db: {condition: service_healthy}
+      estoque: {condition: service_healthy}
+      pagamentos: {condition: service_healthy}
+  gateway:
+    <<: *app
+    environment:
+      SERVICE_ROLE: gateway
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+    ports: ["127.0.0.1:8080:8000"]
+    depends_on:
+      pedidos: {condition: service_healthy}
+  prometheus:
+    image: prom/prometheus:v3.2.1
+    volumes: ["./observability/prometheus.yaml:/etc/prometheus/prometheus.yml:ro"]
+    ports: ["127.0.0.1:9090:9090"]
+    networks: [backend]
+  otel-collector:
+    image: otel/opentelemetry-collector:0.122.1
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes: ["./observability/collector.yaml:/etc/otelcol/config.yaml:ro"]
+    networks: [backend]
+  jaeger:
+    image: jaegertracing/all-in-one:1.67.0
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports: ["127.0.0.1:16686:16686"]
+    networks: [backend]
+networks:
+  backend:
+    driver: bridge
+volumes:
+  postgres-data:

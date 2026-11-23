@@ -1,0 +1,15 @@
+.env
+.venv/
+__pycache__/
+.ruff_cache/
+*.pyc
+*.tfstate*
+.terraform/
+*.tfplan
+kubeconfig*
+evidencias/
+!evidencias/.gitkeep
+docs/video-url.txt
+.tools/
+.local/
+.venv-relatorios/

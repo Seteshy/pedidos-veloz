@@ -1,0 +1,15 @@
+.git
+.env
+.venv
+__pycache__
+tests
+docs
+infra
+k8s
+evidencias
+*.zip
+.tools
+.local
+.venv-relatorios
+.ruff_cache
+relatorios

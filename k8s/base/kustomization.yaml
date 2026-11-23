@@ -1,0 +1,32 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: veloz
+resources:
+- db-service.yaml
+- db.yaml
+- estoque-hpa.yaml
+- estoque-pdb.yaml
+- estoque-service.yaml
+- estoque.yaml
+- gateway-hpa.yaml
+- gateway-pdb.yaml
+- gateway-service.yaml
+- gateway.yaml
+- network.yaml
+- pagamentos-hpa.yaml
+- pagamentos-pdb.yaml
+- pagamentos-service.yaml
+- pagamentos.yaml
+- pedidos-hpa.yaml
+- pedidos-pdb.yaml
+- pedidos-service.yaml
+- pedidos.yaml
+configMapGenerator:
+- name: app-config
+  literals:
+  - DB_HOST=db
+  - DB_NAME=veloz
+  - DB_USER=veloz
+- name: db-init
+  files:
+  - init.sql
