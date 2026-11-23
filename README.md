@@ -9,7 +9,6 @@ Projeto acadêmico de Cloud DevOps, por **Arthur Lima Pereira**, RA **133275**, 
 MVP de pedidos com quatro microsserviços Python/FastAPI e PostgreSQL. A Loja Veloz é o cenário do enunciado; estoque inicial e pagamentos são exclusivamente didáticos. O pagamento **não integra um provedor financeiro real**.
 
 **Vídeo pitch:** PENDENTE DE GRAVAÇÃO E PUBLICAÇÃO.
-Depois de publicar como não listado, use `python scripts/definir_video.py "URL_DO_YOUTUBE"` e gere novamente os PDFs seguindo `docs/COMO_FINALIZAR.txt`.
 
 ## Arquitetura
 
