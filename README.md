@@ -1,58 +1,84 @@
 # Pedidos Veloz
 
-**Repositório público:** https://github.com/Seteshy/pedidos-veloz
+[![CI/CD](https://github.com/Seteshy/pedidos-veloz/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/Seteshy/pedidos-veloz/actions/runs/45254549698)
 
-[![CI/CD](https://github.com/Seteshy/pedidos-veloz/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/Seteshy/pedidos-veloz/actions/runs/45253072887)
+**Arthur Lima Pereira · RA 133275**
 
-Projeto acadêmico de Cloud DevOps, por **Arthur Lima Pereira**, RA **133275**, Análise e Desenvolvimento de Sistemas, **UNIFECAF**.
+Análise e Desenvolvimento de Sistemas · UNIFECAF
 
-MVP de pedidos com quatro microsserviços Python/FastAPI e PostgreSQL. A Loja Veloz é o cenário do enunciado; estoque inicial e pagamentos são exclusivamente didáticos. O pagamento **não integra um provedor financeiro real**.
+Cloud DevOps Orchestrating Containers and Micro Services
 
-**Vídeo pitch:** PENDENTE DE GRAVAÇÃO E PUBLICAÇÃO.
+**Repositório:** https://github.com/Seteshy/pedidos-veloz
+
+**Vídeo pitch:** https://youtu.be/AsaNpzbPS1k
+
+## Proposta
+
+Neste projeto, implementei um MVP de uma plataforma de pedidos para o cenário da Loja Veloz. O objetivo é integrar desenvolvimento local padronizado, conteinerização, Kubernetes, CI/CD e observabilidade em uma aplicação distribuída.
+
+O pagamento é simulado e o estoque inicial de 100 camisetas é uma massa de teste. O projeto não processa transações financeiras reais.
 
 ## Arquitetura
 
 ```text
 Cliente -> Gateway :8080 -> Pedidos -> Estoque
-                              |          |
-                              +-> Pagamentos (simulado)
-                              |          |
-                              +---- PostgreSQL (volume)
+                              |
+                              +-----> Pagamentos simulado
 
-Cada serviço -> /metrics/ -> Prometheus :9090
-Cada serviço -> OpenTelemetry Collector -> Jaeger :16686
-Logs JSON -> stdout (docker compose logs)
+Pedidos, Estoque e Pagamentos -> PostgreSQL
+
+Serviços -> /metrics/ -> Prometheus :9090
+Serviços -> OpenTelemetry Collector -> Jaeger :16686
+Logs JSON -> stdout
 ```
 
-Uma imagem é reutilizada em quatro processos independentes, selecionados por `SERVICE_ROLE`. Isso reduz duplicação no MVP; em uma evolução, cada serviço poderia ter seu repositório e release. Somente o serviço responsável acessa sua tabela por meio do código, mas banco e credencial são compartilhados no laboratório. A separação por usuários/schemas e permissões é uma melhoria necessária para produção.
+Adotei quatro serviços Python/FastAPI, executados em processos independentes. Uma imagem compartilhada utiliza `SERVICE_ROLE` para selecionar as responsabilidades de cada processo. Essa escolha reduz duplicação no MVP; a separação de releases pode ser feita em uma evolução.
 
-## Iniciar localmente
+O serviço de Pedidos registra a solicitação, reserva o estoque e consulta o pagamento. A aprovação confirma o pedido. A recusa devolve a reserva. O UUID identifica a operação e evita repetir seus efeitos. O PostgreSQL mantém o estado persistente, com tabelas de pedidos, estoque, reservas e pagamentos.
 
-Pré-requisitos: Docker Desktop com engine Linux em execução e Docker Compose v2. Não é necessário contratar nuvem. Execute os comandos **na pasta deste README**.
+## Organização
 
-1. Abra o Docker Desktop. `docker version` deve mostrar Client e Server.
-2. Apenas na primeira configuração, crie o `.env` e escolha uma senha local. Se ele já existir e o ambiente estiver configurado, preserve o arquivo:
+| Pasta ou arquivo | Responsabilidade |
+|---|---|
+| `app/` | API, acesso ao banco e instrumentação |
+| `db/` | Estrutura SQL e dados de teste |
+| `compose.yaml` e `Dockerfile` | Ambiente local e construção da imagem |
+| `k8s/base/` | Deployments, Services, HPA, banco e políticas |
+| `k8s/lab/` | Metrics Server e carga HTTP |
+| `k8s/overlays/registry/` | Imagem publicada, fixada por digest |
+| `infra/` | Módulo Terraform do namespace |
+| `observability/` | Configuração do Prometheus e Collector |
+| `.github/workflows/` | Pipeline de validação e publicação |
+| `tests/` e `scripts/` | Testes e preparação do ambiente Kubernetes |
+| `docs/` e `relatorios/` | Referências, resultados e relatórios técnicos |
+
+## Execução local
+
+Pré-requisitos: Docker Desktop com engine Linux e Docker Compose v2. Os comandos são executados na raiz do repositório, em PowerShell.
+
+O arquivo `.env` contém `POSTGRES_PASSWORD` e `IMAGE_TAG`, conforme `.env.example`. A senha é exclusiva do ambiente local e não é versionada. Na primeira configuração:
 
 ```powershell
 if (!(Test-Path -LiteralPath .env)) {
     Copy-Item .env.example .env
 }
-notepad .env
 ```
 
-3. Suba os serviços com um comando:
+Com `POSTGRES_PASSWORD` definido no `.env`, a inicialização ocorre com um comando:
 
 ```powershell
 docker compose up -d --build --wait --wait-timeout 300
 ```
 
-4. Abra [Swagger do Gateway](http://localhost:8080/docs), [Prometheus](http://localhost:9090) e [Jaeger](http://localhost:16686).
+| Interface | Endereço |
+|---|---|
+| API e Swagger | http://localhost:8080/docs |
+| Prometheus | http://localhost:9090 |
+| Jaeger | http://localhost:16686 |
 
-O Compose cria a rede `backend`, o volume `postgres-data` e aguarda os healthchecks das dependências. As portas publicadas ficam restritas a localhost. O SQL de inicialização só roda quando o volume do PostgreSQL está vazio; alterar esse arquivo não migra um banco existente.
+O Compose cria a rede `backend` e o volume `postgres-data`. Os healthchecks controlam a ordem de início das dependências. As portas publicadas são restritas a localhost. O SQL inicial é executado apenas em um volume vazio; alterações no arquivo não substituem migrações de um banco existente.
 
-## Demonstrar e testar
-
-No PowerShell:
+## API de pedidos
 
 ```powershell
 $pedidoId = [guid]::NewGuid().ToString()
@@ -62,23 +88,28 @@ Invoke-RestMethod "http://localhost:8080/orders/$pedidoId"
 Invoke-RestMethod http://localhost:8080/stock
 ```
 
-Reenviar o mesmo ID e dados devolve o pedido já registrado. Reutilizar o ID com outros dados devolve HTTP 409. Para um novo pedido com pagamento recusado, use outro UUID e `simulate_decline=true`. A reserva será devolvida ao estoque. Produto inexistente gera `REJECTED_STOCK`. Timeouts no fluxo de pedidos geram `MANUAL_REVIEW`, pois um efeito remoto pode já ter ocorrido; não há retry automático nem reconciliador neste MVP. Se o processo morrer no meio do fluxo, um pedido pode permanecer `PENDING`, também exigindo conciliação.
+| Situação | Resultado |
+|---|---|
+| Reserva e pagamento aprovados | `CONFIRMED` |
+| Produto inexistente ou estoque insuficiente | `REJECTED_STOCK` |
+| Pagamento simulado recusado | `REJECTED_PAYMENT`, com devolução da reserva |
+| Resultado remoto incerto | `MANUAL_REVIEW` |
+| Mesmo UUID e mesmos dados | Retorno do pedido existente, sem nova baixa |
+| Mesmo UUID e dados diferentes | HTTP 409 |
 
-Teste ponta a ponta, dentro da imagem já construída:
+`simulate_decline=true` reproduz uma recusa de pagamento. Uma interrupção do processo pode deixar o pedido em `PENDING`; a conciliação desses casos é manual neste MVP.
 
-```powershell
-docker compose exec -T -e BASE_URL=http://localhost:8000 gateway python - < scripts/smoke.py
-```
+## Testes
 
-**No PowerShell**, que não aceita esse redirecionamento de entrada, use:
+Teste de integração contra o Compose em execução:
 
 ```powershell
 Get-Content -Raw scripts/smoke.py | docker compose exec -T -e BASE_URL=http://localhost:8000 gateway python -
 ```
 
-Ou, se tiver Python 3.12+, execute `python scripts/smoke.py` no host. O teste usa biblioteca padrão, cria IDs novos, consome uma unidade de estoque e verifica confirmação, consulta, repetição do ID, falta de estoque e entrada inválida. A compensação de pagamento é verificada quando há pelo menos duas unidades disponíveis no início.
+O smoke verifica criação, consulta, idempotência, produto inexistente, entrada inválida e compensação da reserva. A compensação exige pelo menos duas unidades disponíveis no início. O pedido aprovado consome uma unidade de teste.
 
-Testes unitários e lint (ambiente Python separado):
+Testes unitários e lint com Python 3.12:
 
 ```powershell
 python -m venv .venv
@@ -87,127 +118,94 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m ruff check .
 ```
 
-Os testes unitários simulam banco e chamadas entre serviços; não substituem o smoke contra PostgreSQL real.
+Os testes unitários isolam banco e chamadas HTTP com mocks. O smoke complementa essa verificação utilizando os serviços e o PostgreSQL reais.
 
-## Observar o fluxo
+## Containers e segurança
 
-- Prometheus: `sum by (service) (rate(veloz_http_requests_total[1m]))` e `histogram_quantile(0.95, sum by (le, service) (rate(veloz_http_duration_seconds_bucket[5m])))`.
-- Jaeger: faça pedidos, aguarde alguns segundos, selecione o serviço `gateway` e procure os traces. A instrumentação FastAPI/HTTPX propaga contexto entre serviços; o Collector envia spans por OTLP HTTP ao Jaeger. O tracing está ativo no Compose.
-- Logs: `docker compose logs --tail 50 gateway pedidos estoque pagamentos`. São emitidos JSONs com serviço, rota, status, duração e trace_id, sem registrar senha nem corpo do pedido. Métricas usam templates de rota para evitar labels por UUID.
+O Dockerfile utiliza duas etapas, separando a instalação de dependências da execução. As aplicações usam UID 10001, filesystem somente leitura, diretório temporário gravável, capabilities removidas e bloqueio de elevação de privilégios. O PostgreSQL mantém seus dados em volume próprio.
 
-Não foram definidos objetivos de disponibilidade ou resultados de desempenho medidos. O alvo de CPU e os recursos dos manifests são pontos de partida didáticos a calibrar. Prometheus e Jaeger no Compose usam armazenamento efêmero; retenção durável e alertas são melhorias. Não há service mesh: OpenTelemetry demonstra o tracing com menos componentes. mTLS e controle avançado de tráfego ficam como evolução, não como funcionalidade implementada.
+As dependências diretas são fixadas. A imagem local usa `0.1.0`, e o pipeline publica tags `sha-COMMIT`. A referência usada no overlay do registry é fixada por digest. Imagens base por tag e dependências transitivas ainda podem mudar; não há garantia de reprodução byte a byte do build.
 
-## Kubernetes local
+## Kubernetes e Terraform
 
-O caminho verificado usa **kind 0.31.0 com Kubernetes 1.34.3**, em um nó dentro do Docker. Não exige habilitar o Kubernetes integrado do Docker Desktop. A API fica em localhost. O ambiente é de laboratório: não oferece tolerância a falha de nó e o volume do banco não deve ser tratado como backup. Remover o cluster pode remover seus dados.
-
-Pré-requisitos: Docker Desktop em execução, `kubectl` e PowerShell. Execute na pasta deste README:
+O ambiente validado utiliza kind 0.31.0 e Kubernetes 1.34.3, com um nó dentro do Docker e API restrita a localhost. A preparação está no script:
 
 ```powershell
 .\scripts\iniciar_kubernetes.ps1
-```
-
-O script baixa kind e Terraform oficiais com verificação de checksum, cria o cluster, importa as imagens, usa Terraform para criar o namespace e aplica a base e o Metrics Server. Não apaga o cluster ou os volumes. Uma nova execução pode reaplicar o estado inicial de duas réplicas, que depois é controlado pelo HPA. Não reutilize o script contra produção.
-
-Ferramentas ficam em `.tools/`; kubeconfig, senha e arquivos temporários em `.local/`; ambos estão excluídos do Git, do build e do ZIP. O state Terraform fica fora do Git e do ZIP. O arquivo de lock do provider é versionado. Para consultar em outro terminal:
-
-```powershell
 $env:KUBECONFIG = (Resolve-Path .local/kubeconfig).Path
-kubectl get nodes
 kubectl -n veloz get deployments,pods,pvc,hpa
-Get-Content -Raw scripts/smoke.py | kubectl -n veloz exec -i deployment/gateway -- env BASE_URL=http://localhost:8000 python -
 ```
 
-O smoke usa o banco do cluster, independente do banco do Compose. Para abrir a API do Kubernetes no navegador, execute e mantenha esse terminal aberto enquanto acessa [Swagger Kubernetes](http://localhost:18080/docs):
+O script obtém kind e Terraform oficiais com verificação de checksum, cria o cluster, carrega as imagens, provisiona o namespace com Terraform e aplica os manifests e o Metrics Server. Ferramentas, kubeconfig, credenciais e state ficam fora do versionamento. Um namespace existente sem state exige importação antes de ser gerenciado pelo Terraform.
 
-```powershell
-kubectl -n veloz port-forward service/gateway 18080:8000
-```
+Os Deployments usam duas réplicas iniciais, requests/limits, probes e PodDisruptionBudget. A atualização é rolling update, com `maxUnavailable=0` e `maxSurge=1`. O HPA utiliza CPU em 70% do request e varia de duas a quatro réplicas. O PostgreSQL utiliza StatefulSet e PVC de 1 GiB, sem alta disponibilidade ou backup automático.
 
-Fechar o navegador não encerra o cluster. `Ctrl+C` no terminal encerra apenas o port-forward. Não é preciso deixar navegadores abertos. O Compose continua disponível em localhost:8080 quando estiver em execução.
+O namespace aplica Pod Security Admission `restricted:v1.34`. Os pods usam seccomp, não recebem tokens de ServiceAccount automaticamente e executam sem root. ConfigMaps armazenam configuração e Secrets fornecem credenciais. A política de rede nega ingresso por padrão e permite os fluxos necessários; não há restrição de saída neste MVP.
 
-### Manifests e segurança
+No laboratório, o Metrics Server usa `--kubelet-insecure-tls` por causa do certificado kubelet local. Essa exceção não faz parte de uma configuração de produção com certificados confiáveis.
 
-Os quatro Deployments têm duas réplicas iniciais, probes, requests/limits, PodDisruptionBudget e rolling update (`maxUnavailable=0`, `maxSurge=1`). O HPA usa CPU em 70% do request, entre duas e quatro réplicas. Os valores são didáticos e precisam ser dimensionados para um ambiente real. O PostgreSQL tem uma réplica com PVC, sem alta disponibilidade ou backup automático.
-
-O namespace é criado pelo Terraform com Pod Security Admission `restricted:v1.34`. Aplicações usam UID 10001 e PostgreSQL Alpine usa UID/GID 70. Os pods não recebem tokens automaticamente, removem capabilities, bloqueiam elevação e usam seccomp e filesystem somente leitura com volumes graváveis. ConfigMap contém configuração; a senha é criada como Secret. Base64 sozinho não criptografa Secrets: produção também exige RBAC, criptografia em repouso e rotação.
-
-A base nega ingresso por padrão e permite os fluxos necessários. Neste cluster foi testado: Pedidos acessa Pagamentos; Gateway acessa Estoque, mas não acessa Pagamentos diretamente. Também foi comprovada a rejeição de um pod root em dry-run pelo Pod Security Admission. O teste de rede comprova esses caminhos específicos, não uma auditoria de toda a rede. Não há política de restrição de saída.
-
-### HPA e teste de carga
-
-Metrics Server 0.8.0 fornece CPU para o HPA. O overlay `k8s/lab/metrics-server` usa `--kubelet-insecure-tls` somente por causa do certificado kubelet local do kind. Isso desativa essa validação de certificado nesse caminho: em produção, configure certificados confiáveis e remova a exceção.
-
-```powershell
-kubectl -n veloz top pods
-kubectl apply -f k8s/lab/carga-http.yaml
-kubectl -n veloz get hpa -w
-```
-
-O Job de carga faz apenas GET /stock por três minutos, com 12 trabalhadores, sem alterar estoque ou pedidos. Em outro terminal, acompanhe `kubectl -n veloz logs -f job/carga-http`. A política `allow-gateway-carga-lab` libera apenas esse gerador até o Gateway. O Job termina sozinho e é removido após dez minutos; para repetir depois da remoção, reaplique o arquivo. Caso o Job anterior ainda exista, não é preciso repetir a carga para validar a entrega: as evidências estão salvas.
-
-Na execução de 23/11/2026, o Gateway e o Estoque aumentaram de duas para quatro réplicas, com 3.422 respostas bem-sucedidas e nenhum erro no gerador. Pedidos e Pagamentos permaneceram em duas. Esses números demonstram o mecanismo de escala neste teste, não capacidade de produção. Gateway e Estoque retornaram a duas réplicas após o fim da carga e a janela de estabilização; veja evidencias/hpa-retorno.json.
-
-### Observabilidade e atualizações
-
-Prometheus, Jaeger e Collector continuam demonstrados no Compose. Eles não foram instalados no cluster e o conjunto base não configura exportação OTLP. Para produção, provisionar coleta, armazenamento, retenção e alertas. Não há Ingress ou TLS público no laboratório; o acesso é por port-forward.
-
-Para uma imagem publicada:
-
-```powershell
-kubectl -n veloz set image deployment/gateway gateway=ghcr.io/SEU_USUARIO/SEU_REPOSITORIO:sha-COMMIT
-kubectl -n veloz rollout status deployment/gateway --timeout=180s
-kubectl -n veloz rollout undo deployment/gateway
-```
-
-Repita para os demais serviços conforme a release. Registre a imagem no Kustomize ou use o pipeline para evitar voltar à tag local ao reaplicar a base. Rollback de Deployment não desfaz alterações no banco.
-
-Fontes do laboratório: [kind](https://kind.sigs.k8s.io/docs/user/quick-start/), [Metrics Server](https://github.com/kubernetes-sigs/metrics-server/tree/v0.8.0) e [exportação de imagem por plataforma](https://docs.docker.com/reference/cli/docker/image/save/).
-
-## CI/CD e registry
-
-O projeto está publicado em https://github.com/Seteshy/pedidos-veloz, na branch `main`, com o conteúdo desta pasta na raiz. O workflow faz lint, testes unitários, build, smoke no Compose, validação Terraform e implantação em um cluster kind efêmero. Só depois publica no GHCR com `GITHUB_TOKEN` e tag `sha-COMMIT`. Essa tag permite rastrear o código; não use `latest` como referência de release. O pacote deve estar público para o cluster baixar sem login, ou será necessário configurar `imagePullSecrets` para um pacote privado.
-
-O teste kind exercita rollout e smoke; não instala Metrics Server, não demonstra autoscaling e o CNI padrão não comprova a aplicação de NetworkPolicy. A execução remota de 23/11/2026 concluiu os três jobs obrigatórios: https://github.com/Seteshy/pedidos-veloz/actions/runs/45253072887.
-
-O deploy em um cluster persistente é **opcional e desabilitado por padrão**. Para habilitar: criar o environment `laboratorio`, definir a variável de repositório `ENABLE_DEPLOY=true` e o secret de ambiente `KUBECONFIG_B64` com credencial de escopo mínimo. O cluster e namespace precisam existir, com o Secret `database` previamente criado e acesso às imagens. O runner hospedado do GitHub precisa alcançar o servidor Kubernetes: o cluster do seu computador normalmente não é acessível por ele. Para o trabalho, use o teste kind e o deploy local manual sem expor o cluster à internet.
-
-As actions estão referenciadas por versão principal/versão de release; uma evolução de segurança é fixá-las por SHA revisado. Não há scan de vulnerabilidades neste MVP (opcional no enunciado). Dependências diretas são fixadas; as transitivas e imagens base por tag ainda podem mudar, portanto não se afirma reprodutibilidade bit a bit.
-
-## Terraform
-
-`infra/` contém um esqueleto funcional com provider Kubernetes, variáveis e módulo para criar o namespace com Pod Security Admission em **cluster já existente**. Não cria cluster, VMs nem recursos pagos. Antes do apply, confirme `kube_context`.
-
-```powershell
-.\.tools\terraform\terraform.exe -chdir=infra init
-.\.tools\terraform\terraform.exe -chdir=infra fmt -check -recursive
-.\.tools\terraform\terraform.exe -chdir=infra validate
-.\.tools\terraform\terraform.exe -chdir=infra plan
-```
-
-Neste laboratório, o namespace já é gerenciado pelo Terraform; dispense o `kubectl apply -f k8s/namespace.yaml`. Se o namespace já existir, importe-o antes de gerenciá-lo: `.\.tools\terraform\terraform.exe -chdir=infra import module.ambiente.kubernetes_namespace_v1.this veloz`. Os manifests da base não criam o namespace. O state local é ignorado pelo Git; uma equipe real precisa de backend remoto com acesso controlado, criptografia e locking compatível. O esqueleto foi escolhido para demonstrar IaC sem escolher uma nuvem ou gerar custos.
-
-## Encerrar e diagnosticar
-
-`docker compose ps` mostra o estado; `docker compose logs db pedidos` ajuda a localizar falhas. Se o banco não estiver pronto, verifique senha e logs. Não altere a senha apenas no `.env` esperando que um volume antigo mude sua senha automaticamente. `docker compose down` encerra o ambiente e mantém o volume. O projeto não exige apagar dados para funcionar.
-
-## Fontes e entregáveis
-
-Veja `docs/REFERENCIAS.txt`, `docs/ROTEIRO_VIDEO.txt`, `docs/COMO_FINALIZAR.txt` e `docs/VALIDACAO.txt`. Os relatórios em PDF são gerados de `docs/relatorios.json` por `scripts/gerar_relatorios.py`. O case de referência é o Online Boutique do Google Cloud: https://github.com/GoogleCloudPlatform/microservices-demo. Ele demonstra uma loja em microsserviços; este projeto usa uma implementação própria simplificada e não reproduz a aplicação inteira ou seus resultados.
-
-## Validação local realizada
-
-Em 23/11/2026 foram concluídos o build, a subida dos oito contêineres e o smoke com PostgreSQL real. Prometheus confirmou quatro alvos ativos e Jaeger retornou um trace atravessando os quatro serviços. Veja `docs/VALIDACAO.txt` e `evidencias/`. Kubernetes e Terraform também foram verificados na etapa seguinte; o workflow remoto também foi concluído com sucesso.
-
-## Validação remota no GitHub
-
-Execução aprovada: https://github.com/Seteshy/pedidos-veloz/actions/runs/45253072887. Commit de código verificado: `7e65a3b6644234a6dce9b579201c177dbeaa1e66`. `validar`, `kubernetes-laboratorio` e `publicar` concluíram com sucesso. `deploy` foi ignorado porque a implantação em cluster persistente está desabilitada; não há implantação comercial em nuvem.
-
-Imagem publicada pelo pipeline: `ghcr.io/seteshy/pedidos-veloz:sha-7e65a3b6644234a6dce9b579201c177dbeaa1e66`. O download anônimo do manifesto da imagem foi confirmado, e o digest coincide com o log de publicação. A imagem pública também foi aplicada no Kubernetes local e passou no smoke. Os logs e a evidência do Compose podem ser consultados na execução do Actions. O vídeo ainda precisa ser gravado e publicado.
-Pelo overlay `k8s/overlays/registry`, a imagem fica fixada por digest. Após configurar namespace e Secret, use:
+Aplicação da imagem pública verificada:
 
 ```powershell
 kubectl apply -k k8s/overlays/registry
+Get-Content -Raw scripts/smoke.py | kubectl -n veloz exec -i deployment/gateway -- env BASE_URL=http://localhost:8000 python -
+kubectl -n veloz port-forward service/gateway 18080:8000
 ```
 
-A base continua usando a imagem local para desenvolvimento. O deploy automático do workflow em cluster persistente continua desabilitado; a aplicação da imagem do registry foi uma verificação no cluster kind local.
+A API do cluster fica acessível em http://localhost:18080/docs enquanto o port-forward estiver ativo. O banco do cluster é independente do banco do Compose. A remoção do cluster pode remover seus dados; o volume local não constitui backup.
+
+O módulo `infra/modules/ambiente` cria apenas o namespace em cluster existente. O state é local e protegido pelo `.gitignore`. Uma operação em equipe exigiria backend remoto com controle de acesso, criptografia e locking.
+
+## CI/CD e registry
+
+O workflow executa lint, 11 testes unitários, build, smoke no Compose e validação Terraform. Em seguida, cria um cluster kind temporário, aguarda os rollouts e executa o smoke. A publicação no GHCR ocorre após essas verificações, utilizando `GITHUB_TOKEN` com permissão de escrita em packages. Pull requests não publicam imagens.
+
+- [Execução aprovada do pipeline](https://github.com/Seteshy/pedidos-veloz/actions/runs/45254549698)
+- [Execução da imagem validada no cluster local](https://github.com/Seteshy/pedidos-veloz/actions/runs/45253072887)
+- Imagem: `ghcr.io/seteshy/pedidos-veloz:sha-7e65a3b6644234a6dce9b579201c177dbeaa1e66`
+- Digest: `sha256:743a37eea9ee676d12c06f3a0eafb83ab7003b9521655e631c5afef3e1dd7243`
+
+O manifesto da imagem foi consultado sem autenticação e seu digest foi conferido. O overlay do registry utiliza essa referência. O deploy automático em cluster persistente permanece desabilitado; sua ativação depende de `ENABLE_DEPLOY`, environment `laboratorio` e `KUBECONFIG_B64`, com acesso de rede e permissões adequados. O job `deploy` ignorado nas execuções registradas corresponde a essa configuração.
+
+As actions usam tags de versão. A fixação por SHA e o scan de vulnerabilidades são melhorias previstas. O cluster temporário do CI testa implantação e integração; os testes de HPA e políticas foram realizados no cluster local.
+
+## Observabilidade e escala
+
+Prometheus, Collector e Jaeger estão configurados no Compose. Métricas de requisições e duração são expostas em `/metrics/`. Os logs JSON incluem serviço, rota, status, duração e `trace_id`, sem corpo completo de pedido ou senha. As labels usam templates de rota para limitar cardinalidade. O OpenTelemetry instrumenta FastAPI e HTTPX e propaga contexto entre os serviços.
+
+Consultas PromQL:
+
+```promql
+sum by (service) (veloz_http_requests_total)
+sum by (service) (rate(veloz_http_requests_total[1m]))
+histogram_quantile(0.95, sum by (le, service) (rate(veloz_http_duration_seconds_bucket[5m])))
+```
+
+O teste `k8s/lab/carga-http.yaml` executa GET `/stock` por 180 segundos, com 12 trabalhadores. Foram registradas 3.422 respostas bem-sucedidas e nenhum erro no gerador. Gateway e Estoque passaram de duas para quatro réplicas e retornaram a duas após a carga; Pedidos e Pagamentos permaneceram em duas. Esse resultado comprova a reação do HPA nesse teste, não uma capacidade comercial.
+
+A coleta de métricas confirmou quatro alvos ativos, e um trace no Jaeger percorreu os quatro serviços. O Pod Security Admission rejeitou um pod root em dry-run. A NetworkPolicy permitiu Pedidos acessar Pagamentos e bloqueou o acesso direto do Gateway. O registro completo está em [docs/VALIDACAO.txt](docs/VALIDACAO.txt).
+
+## Limitações e evolução
+
+O pagamento simulado, o banco de uma réplica, a credencial compartilhada e a ausência de autenticação limitam o escopo ao MVP acadêmico. Uma evolução inclui pagamento real, conciliação automática, isolamento de permissões, migrações, backup e restauração testados.
+
+Prometheus e Jaeger usam armazenamento efêmero no Compose. A coleta no cluster, retenção durável e alertas permanecem como evolução. Não há service mesh ou mensageria: o fluxo síncrono foi escolhido para limitar a complexidade. Não foram estabelecidos SLOs nem dimensionamento de produção.
+
+## Operação
+
+```powershell
+docker compose ps
+docker compose logs --tail 50 gateway pedidos estoque pagamentos
+docker compose down
+```
+
+`docker compose down` mantém o volume. Alterar apenas a senha no `.env` não altera a credencial de um banco já inicializado.
+
+## Relatórios e referências
+
+- [Relatório teórico](relatorios/Relatorio_Teorico_Arthur_Lima.pdf)
+- [Relatório prático](relatorios/Relatorio_Pratico_Arthur_Lima.pdf)
+- [Referências consultadas](docs/REFERENCIAS.txt)
+- [Vídeo pitch](https://youtu.be/AsaNpzbPS1k)
+
+O Online Boutique, do [Google Cloud](https://github.com/GoogleCloudPlatform/microservices-demo), foi a referência pública para a decomposição de uma loja em microsserviços e a implantação em Kubernetes. As unidades da disciplina fundamentam as escolhas de arquitetura, containers, orquestração e automação. O Pedidos Veloz utiliza uma implementação própria com escopo reduzido.

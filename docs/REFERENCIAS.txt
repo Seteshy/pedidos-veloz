@@ -1,5 +1,5 @@
 [1] UNIFECAF. Cloud DevOps Orchestrating Containers and Micro Services. Unidades 1 a 4. Material didático fornecido na disciplina, s.d.
-Material fornecido pelo estudante.
+Material didático da disciplina.
 
 [2] WIGGINS, Adam. The Twelve Factor App. Consulta em 22 nov. 2026.
 https://12factor.net/

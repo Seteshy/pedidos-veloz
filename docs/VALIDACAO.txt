@@ -1,59 +1,41 @@
-VALIDAÇÃO DO PROJETO
-Atualização: 23/11/2026
+RESULTADOS DE VALIDAÇÃO DO PEDIDOS VELOZ
 
-PREPARAÇÃO INICIAL EM 22/11/2026
-- 11 testes unitários e lint Ruff passaram. Banco e chamadas remotas simulados nesses testes.
-- docker compose config --quiet e kubectl kustomize k8s/base passaram.
+Autor: Arthur Lima Pereira | RA 133275 | UNIFECAF
+Data dos testes locais e remotos: 22 e 23 de novembro de 2026
+Repositório: https://github.com/Seteshy/pedidos-veloz
+Vídeo pitch: https://youtu.be/AsaNpzbPS1k
 
-EXECUÇÃO LOCAL EM 23/11/2026
-- Docker Desktop iniciou após habilitar VirtualMachinePlatform e reiniciar o Windows.
-- Build da imagem Linux e inicialização dos oito contêineres do Compose concluídos.
-- Smoke contra serviços e PostgreSQL real: PASS.
-- Confirmação, consulta, idempotência, recusa de pagamento com compensação, produto inexistente e rejeição de quantidade inválida verificados.
-- Estoque didático antes/depois: 100/99.
-- Pedido confirmado no teste: e60a529a-2e51-4c5f-8e28-9d56fef5d607.
-- Prometheus: quatro alvos de aplicação com up=1.
-- Jaeger: trace ee852814ef815ef2e433571bb032428c com os quatro serviços.
+TESTES AUTOMATIZADOS
+11 testes unitários aprovados. Cobertura dos caminhos de entrada inválida, gateway, timeout, confirmação, falta de estoque, compensação, idempotência e correlação do trace nos logs. Banco e chamadas remotas são simulados nesses testes.
+Lint Ruff aprovado. Configuração Compose e geração dos manifests com Kustomize verificadas.
 
-EVIDÊNCIAS
-- evidencias/compose-inicializacao.log
-- evidencias/compose-status.txt
-- evidencias/smoke.json
-- evidencias/observabilidade.json
+INTEGRAÇÃO NO COMPOSE
+Build e inicialização dos oito contêineres concluídos.
+Smoke com PostgreSQL real aprovado: criação e consulta de pedido, repetição sem nova baixa, produto inexistente, quantidade inválida e recusa de pagamento com devolução da reserva.
+No primeiro smoke registrado, o estoque de teste passou de 100 para 99 unidades pelo pedido aprovado.
+Prometheus confirmou quatro alvos de aplicação com up=1.
+Jaeger retornou um trace que percorreu Gateway, Pedidos, Estoque e Pagamentos.
 
-EXECUÇÃO KUBERNETES E TERRAFORM EM 23/11/2026
-- kind 0.31.0, nó Kubernetes 1.34.3, API restrita a localhost.
-- Terraform 1.11.4: fmt, validate, plan e apply passaram; somente namespace criado. A repetição do plano resultou em No changes.
-- Imagens importadas como arquivo Linux amd64 para compatibilidade com Docker containerd.
-- Quatro Deployments disponíveis; duas réplicas iniciais de cada serviço; PVC Bound.
-- Smoke Kubernetes: PASS, incluindo compensação e idempotência.
-- Metrics Server 0.8.0 instalado com exceção kubelet-insecure-tls somente neste laboratório.
-- Carga HTTP: 180 segundos, 3422 respostas bem-sucedidas, 0 erros no gerador.
-- HPA: Gateway e Estoque chegaram a quatro réplicas e retornaram a duas após a carga; os demais ficaram em duas. Evidência: hpa-retorno.json.
-- Pod Security Admission rejeitou pod root em dry-run, sem criar o pod.
-- NetworkPolicy: Pedidos -> Pagamentos permitido; Gateway -> Pagamentos bloqueado.
-- Esses testes não medem capacidade comercial nem substituem homologação de produção.
+KUBERNETES E INFRAESTRUTURA COMO CÓDIGO
+Cluster kind 0.31.0, com nó Kubernetes 1.34.3 e API restrita a localhost.
+Terraform 1.11.4: fmt, validate, plan e apply aprovados. O plano criou apenas o namespace veloz. A repetição resultou em No changes.
+Quatro Deployments disponíveis, com duas réplicas iniciais por serviço e PVC do banco vinculado.
+Smoke no Kubernetes aprovado.
+Metrics Server 0.8.0 configurado no laboratório, com exceção de validação do certificado kubelet restrita a esse ambiente.
+Carga de 180 segundos, com 12 trabalhadores: 3.422 respostas HTTP bem-sucedidas e nenhum erro registrado pelo gerador.
+Gateway e Estoque aumentaram de duas para quatro réplicas e retornaram a duas após a carga; Pedidos e Pagamentos permaneceram em duas.
+Pod Security Admission rejeitou um pod root em dry-run, sem criá-lo.
+NetworkPolicy permitiu Pedidos acessar Pagamentos e bloqueou o acesso direto do Gateway a Pagamentos.
 
-EVIDÊNCIAS ADICIONAIS
-- evidencias/kubernetes-status.txt e kubernetes-smoke.json
-- evidencias/terraform-plano.txt, terraform-aplicacao.txt e terraform-validacao.txt
-- evidencias/hpa-carga.json, hpa-eventos.txt e carga-http.json
-- evidencias/pod-security-admission.txt e networkpolicy-*.json
+CI/CD E IMAGEM PUBLICADA
+Execução aprovada: https://github.com/Seteshy/pedidos-veloz/actions/runs/45254549698
+Execução da imagem aplicada no cluster: https://github.com/Seteshy/pedidos-veloz/actions/runs/45253072887
+Jobs validar, kubernetes-laboratorio e publicar concluíram com sucesso. O job deploy foi ignorado porque o ambiente persistente não está habilitado.
+Imagem: ghcr.io/seteshy/pedidos-veloz:sha-7e65a3b6644234a6dce9b579201c177dbeaa1e66
+Digest: sha256:743a37eea9ee676d12c06f3a0eafb83ab7003b9521655e631c5afef3e1dd7243
+O manifesto foi acessado sem autenticação e seu digest corresponde ao log de publicação.
+A imagem foi aplicada por digest no cluster local, com rollout e smoke aprovados.
 
-VALIDAÇÃO REMOTA NO GITHUB EM 23/11/2026
-- Repositório público: https://github.com/Seteshy/pedidos-veloz
-- Execução: https://github.com/Seteshy/pedidos-veloz/actions/runs/45253072887
-- Commit verificado: 7e65a3b6644234a6dce9b579201c177dbeaa1e66
-- validar: success (lint, testes unitários, Compose e validação Terraform).
-- kubernetes-laboratorio: success (cluster kind temporário, rollout e smoke).
-- publicar: success (build e envio de imagem ao GHCR).
-- deploy: skipped; ambiente persistente não habilitado.
-- Manifesto GHCR acessível sem autenticação e digest conferido.
-- Imagem do registry aplicada por digest no kind local; rollout e smoke aprovados.
-- Imagem: ghcr.io/seteshy/pedidos-veloz:sha-7e65a3b6644234a6dce9b579201c177dbeaa1e66
-- Evidência: evidencias/github-ci.json.
-
-PENDENTE
-- Gravação e publicação do pitch; inserir URL real e regenerar PDFs.
-
-Os resultados são de laboratório local. Não representam desempenho comercial ou implantação em nuvem.
+ESCOPO DOS RESULTADOS
+As verificações são de laboratório e dos runners do GitHub Actions. Não constituem dimensionamento comercial, teste de alta disponibilidade ou implantação de produção em nuvem.
+Os logs e artefatos do pipeline estão disponíveis nas execuções indicadas. Os registros locais acompanham o pacote do projeto na pasta evidencias.

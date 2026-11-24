@@ -1,4 +1,4 @@
-# Execute na sua maquina para preparar um laboratorio local. Nao cria recursos em nuvem.
+# Preparacao do cluster Kubernetes local do projeto, sem provisionamento em nuvem.
 $ErrorActionPreference = 'Stop'
 $raizProjeto = Split-Path -Parent $PSScriptRoot
 Push-Location $raizProjeto
